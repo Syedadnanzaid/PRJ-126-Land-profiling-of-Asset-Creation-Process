@@ -1,8 +1,8 @@
 import { Router } from 'express';
+import assetsRoutes from '../modules/assets/assets.routes';
 
 const router = Router();
 
-// Modular REST routes will be mounted here
-// e.g., router.use('/land-assets', landAssetRoutes);
+router.use('/assets', assetsRoutes);
 
 export default router;
