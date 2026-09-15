@@ -6,7 +6,7 @@ export const getAllAssets = async (req: Request, res: Response, next: NextFuncti
   try {
     const { search, status, assetType } = req.query;
 
-    if (status !== undefined && !Object.values(AssetStatus).includes(status as any)) {
+    if (status !== undefined && !(Object.values(AssetStatus) as string[]).includes(status as string)) {
       return res.status(400).json({ status: 'error', message: 'Invalid status value' });
     }
 
@@ -52,7 +52,11 @@ export const createAsset = async (req: Request, res: Response, next: NextFunctio
       return res.status(400).json({ status: 'error', message: 'Invalid status value' });
     }
 
-    const newAsset = await assetsService.createAsset(req.body);
+    if (!req.user || !req.user.user_id) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+
+    const newAsset = await assetsService.createAsset(req.user.user_id, req.body);
     res.status(201).json({ status: 'success', data: newAsset });
   } catch (error) {
     next(error);

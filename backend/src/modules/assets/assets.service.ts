@@ -1,22 +1,7 @@
 import prisma from '../../config/database';
 import { Prisma, AssetStatus } from '@prisma/client';
 
-// Temporary development-safe approach for created_by
-// Since authentication is not implemented yet, we ensure at least one user exists
-// to satisfy the foreign key constraint on LandAsset.created_by.
-async function getDefaultUserId(): Promise<string> {
-  let user = await prisma.user.findFirst();
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        name: 'Dev Default User',
-        email: 'dev@example.com',
-        password_hash: 'dummy_hash',
-      }
-    });
-  }
-  return user.user_id;
-}
+
 
 export const getAllAssets = async (filters: { search?: string; status?: AssetStatus; assetType?: string }) => {
   const where: Prisma.LandAssetWhereInput = {};
@@ -49,37 +34,27 @@ export const getAssetById = async (assetId: string) => {
   });
 };
 
-export const createAsset = async (data: Omit<Prisma.LandAssetCreateInput, 'creator'>) => {
-  const userId = await getDefaultUserId();
-  
-  // Inject the user relation
-  const createData: Prisma.LandAssetCreateInput = {
-    ...data,
-    creator: {
-      connect: { user_id: userId }
-    }
-  };
-
+export const createAsset = async (creatorId: string, data: Omit<Prisma.LandAssetCreateInput, 'creator'>) => {
   // Remove created_by if passed manually to avoid conflicts
-  if ('created_by' in createData as any) {
-    delete (createData as any).created_by;
-  }
+  const { created_by, ...safeData } = data as Omit<Prisma.LandAssetCreateInput, 'creator'> & { created_by?: string };
 
   return prisma.landAsset.create({
-    data: createData
+    data: {
+      ...safeData,
+      creator: {
+        connect: { user_id: creatorId }
+      }
+    }
   });
 };
 
 export const updateAsset = async (assetId: string, data: Prisma.LandAssetUpdateInput) => {
   // Prevent updating created_by directly via standard CRUD
-  const updateData = { ...data };
-  if ('created_by' in updateData) {
-    delete (updateData as any).created_by;
-  }
+  const { created_by, ...safeData } = data as Prisma.LandAssetUpdateInput & { created_by?: string };
 
   return prisma.landAsset.update({
     where: { asset_id: assetId },
-    data: updateData
+    data: safeData
   });
 };
 
