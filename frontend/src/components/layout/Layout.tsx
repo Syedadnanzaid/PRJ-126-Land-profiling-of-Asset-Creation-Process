@@ -5,14 +5,12 @@ import './Layout.css';
 
 interface LayoutProps {
   children: ReactNode;
-  activePage: string;
-  setActivePage: (page: string) => void;
 }
 
-const Layout = ({ children, activePage, setActivePage }: LayoutProps) => {
+const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="app-layout">
-      <Sidebar activePage={activePage} setActivePage={setActivePage} />
+      <Sidebar />
       <div className="main-wrapper">
         <Header />
         <main className="main-content">

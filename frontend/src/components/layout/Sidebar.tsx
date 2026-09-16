@@ -1,23 +1,19 @@
+import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
 import { 
   IconDashboard, IconLandAssets, IconGisMap, 
   IconDocuments, IconDuplicateDetection, IconWorkflow, IconAnalytics 
 } from '../icons/Icons';
 
-interface SidebarProps {
-  activePage: string;
-  setActivePage: (page: string) => void;
-}
-
-const Sidebar = ({ activePage, setActivePage }: SidebarProps) => {
+const Sidebar = () => {
   const navItems = [
-    { name: 'Dashboard', icon: <IconDashboard /> },
-    { name: 'Land Assets', icon: <IconLandAssets /> },
-    { name: 'GIS Map', icon: <IconGisMap /> },
-    { name: 'Documents', icon: <IconDocuments /> },
-    { name: 'Duplicate Detection', icon: <IconDuplicateDetection /> },
-    { name: 'Workflow', icon: <IconWorkflow /> },
-    { name: 'Analytics', icon: <IconAnalytics /> },
+    { name: 'Dashboard', path: '/dashboard', icon: <IconDashboard /> },
+    { name: 'Land Assets', path: '/assets', icon: <IconLandAssets /> },
+    { name: 'GIS Map', path: '/gis', icon: <IconGisMap /> },
+    { name: 'Documents', path: '/documents', icon: <IconDocuments /> },
+    { name: 'Duplicate Detection', path: '/duplicates', icon: <IconDuplicateDetection /> },
+    { name: 'Workflow', path: '/workflow', icon: <IconWorkflow /> },
+    { name: 'Analytics', path: '/analytics', icon: <IconAnalytics /> },
   ];
 
   return (
@@ -27,18 +23,15 @@ const Sidebar = ({ activePage, setActivePage }: SidebarProps) => {
       </div>
       <nav className="sidebar-nav">
         <ul>
-          {navItems.map((item, index) => (
-            <li key={index} className={item.name === activePage ? 'active' : ''}>
-              <a 
-                href="#" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActivePage(item.name);
-                }}
+          {navItems.map((item) => (
+            <li key={item.path}>
+              <NavLink 
+                to={item.path}
+                className={({ isActive }) => (isActive ? 'active' : '')}
               >
                 <span className="icon">{item.icon}</span>
                 <span className="text">{item.name}</span>
-              </a>
+              </NavLink>
             </li>
           ))}
         </ul>

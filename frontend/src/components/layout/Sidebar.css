@@ -55,6 +55,7 @@
   color: #f3f4f6;
 }
 
+.sidebar-nav li a.active,
 .sidebar-nav li.active a {
   background-color: var(--primary-color);
   color: #ffffff;
