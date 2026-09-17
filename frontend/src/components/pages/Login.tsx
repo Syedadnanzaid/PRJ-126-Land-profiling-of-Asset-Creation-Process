@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { loginUser } from '../../services/authService';
 import {
   IconEye, IconEyeOff, IconDatabase, IconMapPin, IconShield,
   IconCloud, IconEnvelope, IconLock, IconBuilding, IconUsers,
@@ -12,8 +14,10 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email || !password) {
@@ -21,9 +25,29 @@ const Login = () => {
       return;
     }
 
-    // UI placeholder logic for demonstration
-    // Authentication logic will be implemented in the next phase
-    setError('Backend authentication is not yet connected. Please check back later.');
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await loginUser(email, password);
+      const res = response as unknown as { data?: { token?: string }, token?: string } | null;
+      const token = res?.token || res?.data?.token;
+
+      if (token) {
+        localStorage.setItem('token', token);
+        navigate('/dashboard');
+      } else {
+        setError('Login failed: Invalid server response.');
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unexpected error occurred during login.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -124,8 +148,8 @@ const Login = () => {
                   <a href="#">Forgot password?</a>
                 </div>
 
-                <button type="submit" className="login-submit-btn">
-                  Sign In
+                <button type="submit" className="login-submit-btn" disabled={loading}>
+                  {loading ? 'Signing In...' : 'Sign In'}
                 </button>
 
                 <div className="login-divider">

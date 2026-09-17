@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom';
+import { logoutUser } from '../../services/authService';
 import { 
   IconLayers, IconClock, IconAlertTriangle, IconCheckCircle, 
   IconFile, IconFileCheck, IconSend, IconXCircle, 
@@ -6,6 +8,13 @@ import {
 import './Dashboard.css';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logoutUser();
+    navigate('/login');
+  };
+
   // Utility to format current date
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -26,12 +35,32 @@ const Dashboard = () => {
             "Sustainable Land. Smarter Governance."
           </blockquote>
         </div>
-        <div className="weather-card-placeholder">
-          <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <IconMapPin width={16} height={16} /> 
-            <IconCloudSun width={20} height={20} /> 
-            Weather Info (Placeholder)
-          </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'stretch' }}>
+          <div className="weather-card-placeholder">
+            <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <IconMapPin width={16} height={16} /> 
+              <IconCloudSun width={20} height={20} /> 
+              Weather Info (Placeholder)
+            </p>
+          </div>
+          <button 
+            onClick={handleLogout}
+            style={{ 
+              padding: '10px 16px', 
+              backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+              color: '#fff', 
+              border: '1px solid rgba(255, 255, 255, 0.3)', 
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              backdropFilter: 'blur(12px)',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)')}
+            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)')}
+          >
+            Logout
+          </button>
         </div>
       </section>
 

@@ -3,6 +3,7 @@ import Layout from './components/layout/Layout';
 import Dashboard from './components/pages/Dashboard';
 import PlaceholderPage from './components/pages/PlaceholderPage';
 import Login from './components/pages/Login';
+import { ProtectedRoute } from './routes/ProtectedRoute';
 import { 
   IconLandAssets, IconGisMap, IconDocuments, 
   IconDuplicateDetection, IconWorkflow, IconAnalytics 
@@ -18,7 +19,14 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/assets" 
               element={<PlaceholderPage title="Land Assets Management" description="View, create, and manage digital land asset profiles." icon={<IconLandAssets />} />} 
