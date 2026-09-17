@@ -4,6 +4,7 @@ import {
   IconDashboard, IconLandAssets, IconGisMap, 
   IconDocuments, IconDuplicateDetection, IconWorkflow, IconAnalytics 
 } from '../icons/Icons';
+import logo from '../../assets/land-asset-governance-logo.png';
 
 const Sidebar = () => {
   const navItems = [
@@ -19,7 +20,13 @@ const Sidebar = () => {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <h2>Land Asset Governance</h2>
+        <div className="sidebar-brand-icon">
+          <img src={logo} alt="Logo" />
+        </div>
+        <div className="sidebar-brand-text">
+          <h2>Land Asset Governance</h2>
+          <p>Sustainable Land. Smarter Governance.</p>
+        </div>
       </div>
       <nav className="sidebar-nav">
         <ul>
