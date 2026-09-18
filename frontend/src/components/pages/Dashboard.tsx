@@ -75,7 +75,7 @@ const Dashboard = () => {
         </div>
         <div className="stat-card">
           <div className="stat-card-header">
-            <h3>Pending Workflows</h3>
+            <h3 style={{ whiteSpace: 'nowrap' }}>Pending Workflows</h3>
             <span className="stat-icon"><IconClock /></span>
           </div>
           <p className="stat-value">0</p>
