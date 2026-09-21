@@ -1,0 +1,20 @@
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.DS_Store
+
+# Datasets
+data/raw/*.csv
+data/processed/*.csv
+data/processed/*.md
+data/robustness/raw/*.csv
+data/robustness/processed/*.csv
+
+# Models (except finals)
+models/*
+!models/random_forest_duplicate.pkl
+!models/evaluation_report.md
