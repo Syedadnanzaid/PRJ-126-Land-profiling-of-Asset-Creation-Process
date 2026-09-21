@@ -4,6 +4,7 @@ import Dashboard from './components/pages/Dashboard';
 import PlaceholderPage from './components/pages/PlaceholderPage';
 import LandAssets from './components/pages/LandAssets';
 import AddAsset from './components/pages/AddAsset';
+import AssetDetails from './components/pages/AssetDetails';
 import Login from './components/pages/Login';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { 
@@ -33,6 +34,10 @@ function App() {
               <Route 
                 path="/assets/new" 
                 element={<AddAsset />} 
+              />
+              <Route 
+                path="/assets/:assetId" 
+                element={<AssetDetails />} 
               />
               <Route 
                 path="/gis" 
