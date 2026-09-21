@@ -38,13 +38,30 @@ export const createAsset = async (creatorId: string, data: Omit<Prisma.LandAsset
   // Remove created_by if passed manually to avoid conflicts
   const { created_by, ...safeData } = data as Omit<Prisma.LandAssetCreateInput, 'creator'> & { created_by?: string };
 
-  return prisma.landAsset.create({
-    data: {
-      ...safeData,
-      creator: {
-        connect: { user_id: creatorId }
+  return prisma.$transaction(async (tx) => {
+    const newAsset = await tx.landAsset.create({
+      data: {
+        ...safeData,
+        creator: {
+          connect: { user_id: creatorId }
+        }
       }
-    }
+    });
+
+    await tx.assetEvent.create({
+      data: {
+        asset_id: newAsset.asset_id,
+        event_type: 'ASSET_CREATED',
+        performed_by: creatorId,
+        metadata: {
+          land_id: newAsset.land_id,
+          survey_no: newAsset.survey_no,
+          asset_type: newAsset.asset_type
+        }
+      }
+    });
+
+    return newAsset;
   });
 };
 

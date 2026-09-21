@@ -33,19 +33,28 @@ export interface DashboardRecentAsset {
   asset_id: string;
   survey_no: string | null;
   asset_type: string | null;
+  area: number | null;
+  latitude: number | null;
+  longitude: number | null;
   status: string;
   created_at: string;
 }
 
-// Note: Using any[] for recentActivities since it's currently empty array in API response
-// and no type shape is yet provided for AssetEvent.
+export interface DashboardActivity {
+  event_id: string;
+  asset_id: string;
+  event_type: string;
+  metadata: any;
+  created_at: string;
+}
+
 export interface DashboardAnalytics {
   statistics: DashboardStatistics;
   distribution: DashboardDistribution[];
   workflowStatus: DashboardWorkflowStatus;
   geographicAssets: DashboardGeographicAsset[];
   recentAssets: DashboardRecentAsset[];
-  recentActivities: unknown[];
+  recentActivities: DashboardActivity[];
 }
 
 export interface AnalyticsResponse {

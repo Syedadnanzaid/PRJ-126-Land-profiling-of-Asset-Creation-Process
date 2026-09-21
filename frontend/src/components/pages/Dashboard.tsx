@@ -6,9 +6,67 @@ import type { DashboardAnalytics } from '../../services/analyticsService';
 import { 
   IconLayers, IconClock, IconAlertTriangle, IconCheckCircle, 
   IconFile, IconFileCheck, IconSend, IconXCircle, 
-  IconMapPin, IconCloudSun 
+  IconMapPin, IconCloudSun, IconEye
 } from '../icons/Icons';
 import './Dashboard.css';
+
+const ASSET_COLORS: Record<string, string> = {
+  'unknown': '#94A3B8',
+  'private land': '#0F9D58',
+  'agricultural': '#F4B400',
+  'government land': '#6C4CE8',
+  'residential': '#3B82F6',
+  'commercial': '#F59E0B',
+  'others': '#64748B',
+};
+
+const getAssetColor = (type: string) => {
+  const normalizedType = (type || 'Unknown').toLowerCase();
+  return ASSET_COLORS[normalizedType] || ASSET_COLORS['others'];
+};
+
+const formatRelativeTime = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  if (isNaN(date.getTime())) return 'unknown time';
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (diffInSeconds < 60) return 'just now';
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+};
+
+const getEventTitle = (eventType: string) => {
+  switch (eventType) {
+    case 'ASSET_CREATED': return 'New land asset created';
+    case 'ASSET_UPDATED': return 'Land asset updated';
+    case 'DOCUMENT_UPLOADED': return 'Document uploaded';
+    case 'SUBMITTED': return 'Asset submitted';
+    case 'UNDER_REVIEW': return 'Asset moved to review';
+    case 'APPROVED': return 'Asset approved';
+    case 'REJECTED': return 'Asset rejected';
+    case 'DUPLICATE_FLAGGED': return 'Potential duplicate detected';
+    default: return eventType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+};
+
+const getEventIcon = (eventType: string) => {
+  switch (eventType) {
+    case 'ASSET_CREATED': return <IconFileCheck width={16} height={16} />;
+    case 'ASSET_UPDATED': return <IconFile width={16} height={16} />;
+    case 'DOCUMENT_UPLOADED': return <IconFile width={16} height={16} />;
+    case 'SUBMITTED': return <IconSend width={16} height={16} />;
+    case 'UNDER_REVIEW': return <IconClock width={16} height={16} />;
+    case 'APPROVED': return <IconCheckCircle width={16} height={16} />;
+    case 'REJECTED': return <IconXCircle width={16} height={16} />;
+    case 'DUPLICATE_FLAGGED': return <IconAlertTriangle width={16} height={16} />;
+    default: return <IconCheckCircle width={16} height={16} />;
+  }
+};
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -138,33 +196,95 @@ const Dashboard = () => {
               <button>This Month</button>
             </div>
           </div>
-          <div className="chart-placeholder-container">
+          <div 
+            className="chart-placeholder-container"
+            style={{
+              background: `radial-gradient(circle, var(--bg-card, #ffffff) 55%, transparent 56%), ${
+                (() => {
+                  const total = analyticsData?.distribution?.reduce((sum, item) => sum + item.count, 0) || 0;
+                  if (total === 0) return 'conic-gradient(#e2e8f0 0% 100%)';
+                  let currentPercentage = 0;
+                  const parts = analyticsData!.distribution.map(item => {
+                    const color = getAssetColor(item.assetType);
+                    const percentage = (item.count / total) * 100;
+                    const start = currentPercentage;
+                    const end = currentPercentage + percentage;
+                    currentPercentage = end;
+                    return `${color} ${start}% ${end}%`;
+                  });
+                  return `conic-gradient(${parts.join(', ')})`;
+                })()
+              }`
+            }}
+          >
             {loading ? (
-              <p>Loading...</p>
+              <p style={{ background: 'var(--bg-card)', padding: '4px 10px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 500, boxShadow: 'var(--shadow-sm)' }}>Loading...</p>
+            ) : analyticsData?.distribution && analyticsData.distribution.length > 0 ? (
+              <div style={{ textAlign: 'center', background: 'var(--bg-card)', borderRadius: '50%', width: '100px', height: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500, marginBottom: '4px' }}>Total</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary-color)', lineHeight: 1 }}>
+                  {analyticsData.distribution.reduce((sum, item) => sum + item.count, 0)}
+                </div>
+              </div>
             ) : (
-              <p>Chart Placeholder</p>
+              <p style={{ background: 'var(--bg-card)', padding: '4px 10px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 500, boxShadow: 'var(--shadow-sm)' }}>No Data</p>
             )}
           </div>
           <ul className="distribution-legend">
             {loading ? (
               <li>Loading distribution...</li>
             ) : analyticsData?.distribution && analyticsData.distribution.length > 0 ? (
-              analyticsData.distribution.map((d, index) => {
-                const typeClass = d.assetType ? d.assetType.toLowerCase() : 'others';
-                return (
-                  <li key={index}>
-                    <span className={`color-indicator ${typeClass}`}></span> 
-                    <span style={{ textTransform: 'capitalize' }}>{d.assetType || 'Others'}</span> ({d.count})
-                  </li>
-                );
-              })
+              (() => {
+                const total = analyticsData.distribution.reduce((sum, item) => sum + item.count, 0);
+                return analyticsData.distribution.map((d, index) => {
+                  const color = getAssetColor(d.assetType);
+                  const percentage = total > 0 ? Math.round((d.count / total) * 100) : 0;
+                  return (
+                    <li key={index}>
+                      <div className="legend-name">
+                        <span className="color-indicator" style={{ backgroundColor: color }}></span> 
+                        <span style={{ textTransform: 'capitalize' }}>{d.assetType || 'Unknown'}</span>
+                      </div>
+                      <div className="legend-stats">
+                        <span className="legend-count">{d.count}</span>
+                        <span className="legend-percentage">{percentage}%</span>
+                      </div>
+                    </li>
+                  );
+                });
+              })()
             ) : (
               <>
-                <li><span className="color-indicator agricultural"></span> Agricultural</li>
-                <li><span className="color-indicator residential"></span> Residential</li>
-                <li><span className="color-indicator commercial"></span> Commercial</li>
-                <li><span className="color-indicator government"></span> Government</li>
-                <li><span className="color-indicator others"></span> Others</li>
+                <li>
+                  <div className="legend-name">
+                    <span className="color-indicator" style={{ backgroundColor: ASSET_COLORS['agricultural'] }}></span> Agricultural
+                  </div>
+                  <div className="legend-stats"><span className="legend-count">0</span><span className="legend-percentage">0%</span></div>
+                </li>
+                <li>
+                  <div className="legend-name">
+                    <span className="color-indicator" style={{ backgroundColor: ASSET_COLORS['residential'] }}></span> Residential
+                  </div>
+                  <div className="legend-stats"><span className="legend-count">0</span><span className="legend-percentage">0%</span></div>
+                </li>
+                <li>
+                  <div className="legend-name">
+                    <span className="color-indicator" style={{ backgroundColor: ASSET_COLORS['commercial'] }}></span> Commercial
+                  </div>
+                  <div className="legend-stats"><span className="legend-count">0</span><span className="legend-percentage">0%</span></div>
+                </li>
+                <li>
+                  <div className="legend-name">
+                    <span className="color-indicator" style={{ backgroundColor: ASSET_COLORS['government land'] }}></span> Government
+                  </div>
+                  <div className="legend-stats"><span className="legend-count">0</span><span className="legend-percentage">0%</span></div>
+                </li>
+                <li>
+                  <div className="legend-name">
+                    <span className="color-indicator" style={{ backgroundColor: ASSET_COLORS['others'] }}></span> Others
+                  </div>
+                  <div className="legend-stats"><span className="legend-count">0</span><span className="legend-percentage">0%</span></div>
+                </li>
               </>
             )}
           </ul>
@@ -239,8 +359,15 @@ const Dashboard = () => {
 
       {/* 4. Recent Asset Registrations */}
       <section className="dashboard-widget recent-assets">
-        <div className="widget-header">
+        <div className="widget-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2>Recent Asset Registrations</h2>
+          <button 
+            className="view-all-link" 
+            onClick={() => navigate('/assets')}
+            style={{ background: 'none', border: 'none', color: 'var(--primary-color)', fontSize: '0.9rem', fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            View All &rarr;
+          </button>
         </div>
         <div className="table-responsive">
           <table className="assets-table">
@@ -252,7 +379,7 @@ const Dashboard = () => {
                 <th>Area (Acres)</th>
                 <th>Date Added</th>
                 <th>Status</th>
-                <th>Actions</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -261,21 +388,38 @@ const Dashboard = () => {
                   <td colSpan={7} style={{ textAlign: 'center', padding: '24px' }}>Loading recent assets...</td>
                 </tr>
               ) : analyticsData?.recentAssets && analyticsData.recentAssets.length > 0 ? (
-                analyticsData.recentAssets.map(asset => (
-                  <tr key={asset.asset_id}>
-                    <td>{asset.asset_id.substring(0, 8)}...</td>
-                    <td>{asset.survey_no || 'N/A'}</td>
-                    <td style={{ textTransform: 'capitalize' }}>{asset.asset_type || 'N/A'}</td>
-                    <td>N/A</td>
-                    <td>{new Date(asset.created_at).toLocaleDateString()}</td>
-                    <td>
-                      {asset.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </td>
-                    <td>
-                      <span style={{ color: 'var(--accent-color)', cursor: 'pointer', fontSize: '0.9rem' }}>View</span>
-                    </td>
-                  </tr>
-                ))
+                analyticsData.recentAssets.map(asset => {
+                  const locationStr = (asset.latitude != null && asset.longitude != null) 
+                    ? `${asset.latitude.toFixed(4)}, ${asset.longitude.toFixed(4)}` 
+                    : 'N/A';
+                  const typeColor = getAssetColor(asset.asset_type || '');
+                  return (
+                    <tr key={asset.asset_id}>
+                      <td style={{ fontWeight: 500 }}>{asset.asset_id.substring(0, 8).toUpperCase()}</td>
+                      <td>{locationStr}</td>
+                      <td style={{ textTransform: 'capitalize', display: 'flex', alignItems: 'center' }}>
+                        <span className="asset-type-indicator" style={{ backgroundColor: typeColor }}></span>
+                        {asset.asset_type || 'N/A'}
+                      </td>
+                      <td>{asset.area != null ? asset.area.toString() : 'N/A'}</td>
+                      <td>{new Date(asset.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+                      <td>
+                        <span className={`status-badge ${asset.status.toLowerCase()}`}>
+                          {asset.status.replace(/_/g, ' ').toUpperCase()}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button 
+                          className="action-btn view-btn" 
+                          onClick={() => navigate(`/assets/${asset.asset_id}`)}
+                          style={{ background: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '4px 8px', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--text-main)', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}
+                        >
+                          <IconEye width={14} height={14} /> View
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : null}
             </tbody>
           </table>
@@ -291,6 +435,9 @@ const Dashboard = () => {
       <section className="dashboard-widget recent-activities">
         <div className="widget-header">
           <h2>Recent Activities</h2>
+          <div className="header-actions">
+            <span className="view-all-text" style={{ cursor: 'pointer', color: 'var(--primary-color)', fontSize: '0.9rem', fontWeight: 600 }}>View All &rarr;</span>
+          </div>
         </div>
         <div className="timeline-container">
           {loading ? (
@@ -298,8 +445,21 @@ const Dashboard = () => {
               <p>Loading activities...</p>
             </div>
           ) : analyticsData?.recentActivities && analyticsData.recentActivities.length > 0 ? (
-            <div className="empty-state">
-              <p>Activity timeline...</p>
+            <div className="timeline">
+              {analyticsData.recentActivities.map((activity) => (
+                <div key={activity.event_id} className="timeline-item">
+                  <div className="timeline-icon">
+                    {getEventIcon(activity.event_type)}
+                  </div>
+                  <div className="timeline-content">
+                    <div className="timeline-header">
+                      <p className="timeline-title">{getEventTitle(activity.event_type)}</p>
+                      <span className="timeline-time">{formatRelativeTime(activity.created_at)}</span>
+                    </div>
+                    <p className="timeline-asset">Asset: {activity.asset_id.substring(0, 8).toUpperCase()}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="empty-state">

@@ -30,12 +30,12 @@ export const getDashboardAnalytics = async () => {
   // 2. Asset Distribution
   const distributionRaw = await prisma.landAsset.groupBy({
     by: ['asset_type'],
-    _count: { asset_type: true }
+    _count: { _all: true }
   });
   
   const distribution = distributionRaw.map(item => ({
     assetType: item.asset_type || 'Unknown',
-    count: item._count.asset_type
+    count: item._count._all
   }));
 
   // 3. Workflow Status
@@ -103,6 +103,24 @@ export const getDashboardAnalytics = async () => {
     created_at: asset.created_at.toISOString()
   }));
 
+  // 6. Recent Activities
+  const recentActivitiesRaw = await prisma.assetEvent.findMany({
+    orderBy: { created_at: 'desc' },
+    take: 5,
+    select: {
+      event_id: true,
+      asset_id: true,
+      event_type: true,
+      metadata: true,
+      created_at: true
+    }
+  });
+
+  const recentActivities = recentActivitiesRaw.map(event => ({
+    ...event,
+    created_at: event.created_at.toISOString()
+  }));
+
   return {
     statistics: {
       totalAssets,
@@ -115,6 +133,6 @@ export const getDashboardAnalytics = async () => {
     workflowStatus,
     geographicAssets,
     recentAssets,
-    recentActivities: []
+    recentActivities
   };
 };

@@ -243,10 +243,10 @@
 }
 
 .chart-placeholder-container {
-  height: 200px;
+  height: 175px;
   background: radial-gradient(circle, #f1f5f9 40%, transparent 41%), conic-gradient(#10b981 0% 35%, #3b82f6 35% 60%, #f59e0b 60% 80%, #64748b 80% 95%, #e2e8f0 95% 100%);
   border-radius: 50%;
-  width: 200px;
+  width: 175px;
   margin: 16px auto 24px auto;
   display: flex;
   align-items: center;
@@ -274,8 +274,35 @@
 .distribution-legend li {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   font-size: 0.9rem;
   color: var(--text-main);
+  padding: 4px 0;
+}
+
+.legend-name {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.legend-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-weight: 500;
+}
+
+.legend-count {
+  width: 24px;
+  text-align: right;
+  color: var(--text-main);
+}
+
+.legend-percentage {
+  width: 40px;
+  text-align: right;
+  color: var(--text-muted);
 }
 
 .color-indicator {
@@ -594,4 +621,314 @@
     text-align: center;
     gap: 8px;
   }
+}
+
+/* Status Badges */
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-block;
+  text-align: center;
+}
+
+.status-badge.draft {
+  background-color: #F1F5F9;
+  color: #475569;
+}
+
+.status-badge.submitted {
+  background-color: #FEF3C7;
+  color: #B45309;
+}
+
+.status-badge.under_review {
+  background-color: #DBEAFE;
+  color: #1D4ED8;
+}
+
+.status-badge.approved {
+  background-color: #DCFCE7;
+  color: #15803D;
+}
+
+.workflow-status-list li:nth-child(5) .status-label svg {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #EF4444;
+}
+
+.status-count {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  background: var(--bg-card);
+  padding: 4px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+/* 4. Recent Asset Registrations */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.assets-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.assets-table th {
+  padding: 12px 20px;
+  background-color: var(--bg-app);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.assets-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+  background: var(--bg-app);
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--radius-md);
+  margin-top: 16px;
+  font-size: 0.95rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 5. Recent Activities */
+.timeline-container {
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+.timeline-container .empty-state {
+  flex: 1;
+  margin-top: 0;
+}
+
+/* 6. Footer */
+.dashboard-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 0 8px 0;
+  border-top: 1px solid var(--border-color);
+  margin-top: 8px;
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+}
+
+.footer-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.footer-links a:hover {
+  color: var(--primary-color);
+}
+
+.footer-copyright {
+  text-align: right;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.footer-copyright p {
+  margin: 0;
+}
+
+.footer-slogan {
+  color: var(--accent-color) !important;
+  font-weight: 600;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 1280px) {
+  .dashboard-main-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .workflow-status {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 1024px) {
+  .dashboard-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dashboard-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+  }
+  .hero-content {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 16px 0;
+  }
+  .main-content {
+    padding: 16px !important;
+  }
+  .dashboard-stats-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dashboard-main-row {
+    grid-template-columns: 1fr;
+  }
+  .workflow-status {
+    grid-column: span 1;
+  }
+  .dashboard-footer {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+  .footer-copyright {
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+}
+
+/* Status Badges */
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-block;
+  text-align: center;
+}
+
+.status-badge.draft {
+  background-color: #F1F5F9;
+  color: #475569;
+}
+
+.status-badge.submitted {
+  background-color: #FEF3C7;
+  color: #B45309;
+}
+
+.status-badge.under_review {
+  background-color: #DBEAFE;
+  color: #1D4ED8;
+}
+
+.status-badge.approved {
+  background-color: #DCFCE7;
+  color: #15803D;
+}
+
+.status-badge.rejected {
+  background-color: #FEE2E2;
+  color: #DC2626;
+}
+
+.asset-type-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+/* Timeline */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-left: 10px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 25px;
+  width: 2px;
+  background-color: #E2E8F0;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 16px;
+  position: relative;
+  padding-bottom: 24px;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #F1F5F9;
+  color: #3B82F6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.timeline-content {
+  flex: 1;
+  padding-top: 4px;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.timeline-title {
+  font-weight: 600;
+  color: #1E293B;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.timeline-time {
+  font-size: 0.85rem;
+  color: #64748B;
+  white-space: nowrap;
+}
+
+.timeline-asset {
+  font-size: 0.85rem;
+  color: #64748B;
+  margin: 0;
 }
