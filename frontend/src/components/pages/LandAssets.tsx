@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   IconLayers, IconClock, IconAlertTriangle, IconCheckCircle,
   IconSearch, IconFilter, IconChevronDown, IconRotateCcw,
@@ -6,9 +6,68 @@ import {
 } from '../icons/Icons';
 import './Dashboard.css';
 import './LandAssets.css';
+import { useNavigate } from 'react-router-dom';
+import { getAssets } from '../../services/assetService';
+import type { LandAsset, AssetStatus } from '../../services/assetService';
 
 const LandAssets = () => {
+  const navigate = useNavigate();
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [assets, setAssets] = useState<LandAsset[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAssets = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await getAssets();
+      if (response && response.data) {
+        setAssets(response.data);
+      } else {
+        throw new Error('Invalid response');
+      }
+    } catch (err) {
+      setError("Unable to load land assets. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAssets();
+  }, []);
+
+
+
+  const totalAssets = assets.length;
+  const pendingReview = assets.filter(a => a.status === 'UNDER_REVIEW').length;
+  const approvedAssets = assets.filter(a => a.status === 'APPROVED').length;
+
+  const formatStatus = (status: AssetStatus) => {
+    switch(status) {
+      case 'DRAFT': return 'Draft';
+      case 'SUBMITTED': return 'Submitted';
+      case 'UNDER_REVIEW': return 'Under Review';
+      case 'APPROVED': return 'Approved';
+      case 'REJECTED': return 'Rejected';
+      default: return status;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString;
+    return d.toLocaleDateString();
+  };
+
+  const renderLocation = (lat?: number | null, lng?: number | null) => {
+    if (lat != null && lng != null) {
+      return `${lat}, ${lng}`;
+    }
+    return "Not available";
+  };
 
   return (
     <div className="dashboard-container land-assets-page">
@@ -25,7 +84,7 @@ const LandAssets = () => {
           </blockquote>
         </div>
         <div className="hero-actions">
-          <button className="btn-primary">
+          <button className="btn-primary" onClick={() => navigate('/assets/new')}>
             <span style={{ fontSize: '1.4rem', lineHeight: '1' }}>+</span> Add New Asset
           </button>
         </div>
@@ -38,14 +97,14 @@ const LandAssets = () => {
             <h3>Total Land Assets</h3>
             <span className="stat-icon"><IconLayers /></span>
           </div>
-          <p className="stat-value">0</p>
+          <p className="stat-value">{totalAssets}</p>
         </div>
         <div className="stat-card">
           <div className="stat-card-header">
             <h3>Pending Review</h3>
             <span className="stat-icon"><IconClock /></span>
           </div>
-          <p className="stat-value">0</p>
+          <p className="stat-value">{pendingReview}</p>
         </div>
         <div className="stat-card">
           <div className="stat-card-header">
@@ -59,7 +118,7 @@ const LandAssets = () => {
             <h3>Approved Assets</h3>
             <span className="stat-icon"><IconCheckCircle /></span>
           </div>
-          <p className="stat-value">0</p>
+          <p className="stat-value">{approvedAssets}</p>
         </div>
       </section>
 
@@ -160,7 +219,7 @@ const LandAssets = () => {
             <h3>All Land Assets</h3>
           </div>
           <div className="toolbar-right">
-            <span className="toolbar-count">Showing 0–0 of 0 assets</span>
+            <span className="toolbar-count">Showing {assets.length > 0 ? 1 : 0}–{assets.length} of {assets.length} assets</span>
             <div className="toolbar-view-toggle">
               <span className="view-label">View:</span>
               <button className="btn-view active"><IconList width={16} height={16} /></button>
@@ -190,34 +249,68 @@ const LandAssets = () => {
                   <th style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {/* No rows, showing empty state instead */}
-              </tbody>
+              {!isLoading && !error && assets.length > 0 && (
+                <tbody>
+                  {assets.map((asset) => (
+                    <tr key={asset.asset_id}>
+                      <td>{asset.asset_id}</td>
+                      <td>{asset.survey_no || 'N/A'}</td>
+                      <td>{asset.owner_name || 'N/A'}</td>
+                      <td>{renderLocation(asset.latitude, asset.longitude)}</td>
+                      <td style={{ textTransform: 'capitalize' }}>{asset.asset_type || 'N/A'}</td>
+                      <td>{asset.area != null ? asset.area : 'N/A'}</td>
+                      <td>{formatStatus(asset.status)}</td>
+                      <td>Not Checked</td>
+                      <td>{formatDate(asset.updated_at)}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ color: 'var(--accent-color)', cursor: 'pointer', fontSize: '0.9rem' }}>View</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              )}
             </table>
             
-            <div className="empty-state" style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              padding: '60px 20px',
-              border: 'none',
-              backgroundColor: '#fff',
-              margin: 0
-            }}>
-              <div style={{ 
-                backgroundColor: 'var(--bg-app)',
-                padding: '16px',
-                borderRadius: '50%',
-                marginBottom: '20px'
-              }}>
-                <IconLayers width={32} height={32} style={{ color: 'var(--text-muted)' }} />
+            {isLoading && (
+              <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                Loading land assets...
               </div>
-              <p style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>No land assets available yet.</p>
-              <p style={{ margin: '0 0 24px 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>Get started by registering a new land asset into the system.</p>
-              <button className="btn-primary">
-                <span style={{ fontSize: '1.4rem', lineHeight: '1' }}>+</span> Add First Asset
-              </button>
-            </div>
+            )}
+
+            {!isLoading && error && (
+              <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <p style={{ marginBottom: '16px' }}>{error}</p>
+                <button className="btn-secondary" onClick={fetchAssets} style={{ cursor: 'pointer' }}>
+                  <IconRotateCcw width={16} height={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Retry
+                </button>
+              </div>
+            )}
+
+            {!isLoading && !error && assets.length === 0 && (
+              <div className="empty-state" style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                padding: '60px 20px',
+                border: 'none',
+                backgroundColor: '#fff',
+                margin: 0
+              }}>
+                <div style={{ 
+                  backgroundColor: 'var(--bg-app)',
+                  padding: '16px',
+                  borderRadius: '50%',
+                  marginBottom: '20px'
+                }}>
+                  <IconLayers width={32} height={32} style={{ color: 'var(--text-muted)' }} />
+                </div>
+                <p style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>No land assets available yet.</p>
+                <p style={{ margin: '0 0 24px 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>Get started by registering a new land asset into the system.</p>
+                <button className="btn-primary" onClick={() => navigate('/assets/new')}>
+                  <span style={{ fontSize: '1.4rem', lineHeight: '1' }}>+</span> Add First Asset
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -225,7 +318,7 @@ const LandAssets = () => {
         <div className="pagination-footer">
           <div className="pagination-left">
             <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-              Showing 0–0 of 0 assets
+              Showing {assets.length > 0 ? 1 : 0}–{assets.length} of {assets.length} assets
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Show</span>
@@ -244,6 +337,7 @@ const LandAssets = () => {
           </div>
         </div>
       </section>
+
     </div>
   );
 };

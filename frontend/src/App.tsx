@@ -3,6 +3,7 @@ import Layout from './components/layout/Layout';
 import Dashboard from './components/pages/Dashboard';
 import PlaceholderPage from './components/pages/PlaceholderPage';
 import LandAssets from './components/pages/LandAssets';
+import AddAsset from './components/pages/AddAsset';
 import Login from './components/pages/Login';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { 
@@ -28,6 +29,10 @@ function App() {
               <Route 
                 path="/assets" 
                 element={<LandAssets />} 
+              />
+              <Route 
+                path="/assets/new" 
+                element={<AddAsset />} 
               />
               <Route 
                 path="/gis" 
