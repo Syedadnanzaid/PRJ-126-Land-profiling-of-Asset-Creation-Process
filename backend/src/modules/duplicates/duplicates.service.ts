@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { ReviewStatus } from '@prisma/client';
 
 const AI_API_URL = process.env.AI_API_URL || 'http://127.0.0.1:8000';
 
@@ -78,3 +79,30 @@ export const checkDuplicate = async (
         ai_result: aiResult
     };
 };
+
+export const reviewDuplicateFlag = async (
+    flagId: string,
+    userId: string,
+    reviewStatus: ReviewStatus,
+    remarks?: string
+) => {
+    const flag = await prisma.duplicateFlag.findUnique({
+        where: { flag_id: flagId }
+    });
+
+    if (!flag) {
+        return null;
+    }
+
+    const updatedFlag = await prisma.duplicateFlag.update({
+        where: { flag_id: flagId },
+        data: {
+            review_status: reviewStatus,
+            reviewed_by: userId,
+            reviewed_at: new Date(),
+            remarks: remarks || null
+        }
+    });
+
+    return updatedFlag;
+};
