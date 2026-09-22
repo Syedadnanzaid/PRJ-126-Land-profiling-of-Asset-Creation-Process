@@ -32,3 +32,9 @@ cd src
 python generate_robust_dataset.py
 python run_robust_pipeline.py
 ```
+
+## Regenerating Evaluation Graphs
+To regenerate the evaluation graphs in `models/graphs/` using the actual final model and robust test set:
+```bash
+python src/generate_evaluation_graphs.py
+```
