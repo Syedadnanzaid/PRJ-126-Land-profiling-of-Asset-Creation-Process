@@ -30,7 +30,15 @@ export const getAllAssets = async (filters: { search?: string; status?: AssetSta
 
 export const getAssetById = async (assetId: string) => {
   return prisma.landAsset.findUnique({
-    where: { asset_id: assetId }
+    where: { asset_id: assetId },
+    include: {
+      events: {
+        orderBy: { created_at: 'desc' }
+      },
+      documents: {
+        orderBy: { uploaded_at: 'desc' }
+      }
+    }
   });
 };
 

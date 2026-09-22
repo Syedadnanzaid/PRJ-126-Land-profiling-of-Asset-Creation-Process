@@ -16,6 +16,8 @@ export interface LandAsset {
   created_by: string;
   created_at: string;
   updated_at: string;
+  events?: any[];
+  documents?: any[];
 }
 
 export type CreateAssetInput = Omit<Partial<LandAsset>, 'asset_id' | 'created_by' | 'created_at' | 'updated_at'>;
