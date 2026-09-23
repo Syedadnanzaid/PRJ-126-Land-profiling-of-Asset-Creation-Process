@@ -9,7 +9,7 @@ export const uploadDocumentController = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        const { assetId } = req.params;
+        const { applicationId } = req.params;
         const { document_type } = req.body;
         const userId = (req as any).user?.user_id;
         const file = req.file;
@@ -26,13 +26,17 @@ export const uploadDocumentController = async (
         }
 
         try {
-            const document = await documentsService.uploadDocument(assetId, userId, file, document_type);
+            const document = await documentsService.uploadDocument(applicationId, userId, file, document_type);
             res.status(201).json({ status: 'success', data: document });
         } catch (error: any) {
             if (file && fs.existsSync(file.path)) {
                 fs.unlinkSync(file.path);
             }
-            if (error.message === 'Asset not found') {
+            if (error.message.startsWith('Forbidden')) {
+                res.status(403).json({ status: 'error', message: error.message });
+                return;
+            }
+            if (error.message === 'Application not found') {
                 res.status(404).json({ status: 'error', message: error.message });
                 return;
             }
@@ -43,18 +47,23 @@ export const uploadDocumentController = async (
     }
 };
 
-export const getAssetDocumentsController = async (
+export const getApplicationDocumentsController = async (
     req: Request,
     res: Response,
     next: NextFunction
 ): Promise<void> => {
     try {
-        const { assetId } = req.params;
+        const { applicationId } = req.params;
+        const user = (req as any).user;
         try {
-            const documents = await documentsService.getAssetDocuments(assetId);
+            const documents = await documentsService.getApplicationDocuments(applicationId, user.user_id, user.role);
             res.status(200).json({ status: 'success', data: documents });
         } catch (error: any) {
-            if (error.message === 'Asset not found') {
+            if (error.message.startsWith('Forbidden')) {
+                res.status(403).json({ status: 'error', message: error.message });
+                return;
+            }
+            if (error.message === 'Application not found') {
                 res.status(404).json({ status: 'error', message: error.message });
                 return;
             }
@@ -72,12 +81,20 @@ export const downloadDocumentController = async (
 ): Promise<void> => {
     try {
         const { documentId } = req.params;
+        const user = (req as any).user;
         const document = await documentsService.getDocumentById(documentId);
 
         if (!document) {
             res.status(404).json({ status: 'error', message: 'Document not found' });
             return;
         }
+
+        // Authorization check
+        if (user.role === 'APPLICANT' && document.application.applicant_id !== user.user_id) {
+            res.status(403).json({ status: 'error', message: 'Forbidden: You cannot view documents belonging to other applications' });
+            return;
+        }
+
         const filePath = path.join(__dirname, '../../../', document.storage_key);
         
         if (!fs.existsSync(filePath)) {
@@ -98,21 +115,35 @@ export const deleteDocumentController = async (
 ): Promise<void> => {
     try {
         const { documentId } = req.params;
-        const document = await documentsService.getDocumentById(documentId);
+        const userId = (req as any).user?.user_id;
 
-        if (!document) {
-            res.status(404).json({ status: 'error', message: 'Document not found' });
+        if (!userId) {
+            res.status(401).json({ status: 'error', message: 'Unauthorized' });
             return;
         }
-        const filePath = path.join(__dirname, '../../../', document.storage_key);
-        
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+
+        try {
+            const document = await documentsService.deleteDocument(documentId, userId);
+
+            if (!document) {
+                res.status(404).json({ status: 'error', message: 'Document not found' });
+                return;
+            }
+
+            const filePath = path.join(__dirname, '../../../', document.storage_key);
+            
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+
+            res.status(200).json({ status: 'success', message: 'Document deleted successfully' });
+        } catch (error: any) {
+            if (error.message.startsWith('Forbidden')) {
+                res.status(403).json({ status: 'error', message: error.message });
+                return;
+            }
+            throw error;
         }
-
-        await documentsService.deleteDocument(documentId);
-
-        res.status(200).json({ status: 'success', message: 'Document deleted successfully' });
     } catch (error) {
         next(error);
     }

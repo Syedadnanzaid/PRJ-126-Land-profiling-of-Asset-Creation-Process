@@ -1,31 +1,39 @@
 import prisma from '../../config/database';
-import { EventType } from '@prisma/client';
+import { EventType, ApplicationStatus } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 
 export const uploadDocument = async (
-    assetId: string,
+    applicationId: string,
     userId: string,
     file: Express.Multer.File,
     documentType?: string
 ) => {
-    // Verify asset exists
-    const asset = await prisma.landAsset.findUnique({
-        where: { asset_id: assetId }
+    const application = await prisma.landApplication.findUnique({
+        where: { application_id: applicationId }
     });
 
-    if (!asset) {
-        throw new Error('Asset not found');
+    if (!application) {
+        throw new Error('Application not found');
+    }
+
+    // Ownership check
+    if (application.applicant_id !== userId) {
+        throw new Error('Forbidden: You can only upload documents to your own application');
+    }
+
+    // Status check
+    if (application.status !== ApplicationStatus.DRAFT && application.status !== ApplicationStatus.CORRECTION_REQUIRED) {
+        throw new Error(`Forbidden: Cannot upload documents when application is in ${application.status} state`);
     }
 
     const storageKey = `uploads/${file.filename}`;
 
     try {
-        // Run in transaction to ensure both document and event are created together
         const document = await prisma.$transaction(async (tx) => {
             const newDoc = await tx.document.create({
                 data: {
-                    asset_id: assetId,
+                    application_id: applicationId,
                     file_name: file.originalname,
                     document_type: documentType || null,
                     storage_key: storageKey,
@@ -37,7 +45,8 @@ export const uploadDocument = async (
 
             await tx.assetEvent.create({
                 data: {
-                    asset_id: assetId,
+                    application_id: applicationId,
+                    asset_id: null,
                     event_type: EventType.DOCUMENT_UPLOADED,
                     performed_by: userId,
                     metadata: {
@@ -56,34 +65,48 @@ export const uploadDocument = async (
     }
 };
 
-export const getAssetDocuments = async (assetId: string) => {
-    const asset = await prisma.landAsset.findUnique({
-        where: { asset_id: assetId }
+export const getApplicationDocuments = async (applicationId: string, userId: string, role: string) => {
+    const application = await prisma.landApplication.findUnique({
+        where: { application_id: applicationId }
     });
 
-    if (!asset) {
-        throw new Error('Asset not found');
+    if (!application) {
+        throw new Error('Application not found');
+    }
+
+    if (role === 'APPLICANT' && application.applicant_id !== userId) {
+        throw new Error('Forbidden: You can only view documents of your own application');
     }
 
     return prisma.document.findMany({
-        where: { asset_id: assetId },
+        where: { application_id: applicationId },
         orderBy: { uploaded_at: 'desc' }
     });
 };
 
 export const getDocumentById = async (documentId: string) => {
     return prisma.document.findUnique({
-        where: { document_id: documentId }
+        where: { document_id: documentId },
+        include: { application: true }
     });
 };
 
-export const deleteDocument = async (documentId: string) => {
+export const deleteDocument = async (documentId: string, userId: string) => {
     const document = await prisma.document.findUnique({
-        where: { document_id: documentId }
+        where: { document_id: documentId },
+        include: { application: true }
     });
 
     if (!document) {
-        return null; // Return null if not found
+        return null;
+    }
+
+    if (document.application.applicant_id !== userId) {
+        throw new Error('Forbidden: You can only delete documents from your own application');
+    }
+
+    if (document.application.status !== ApplicationStatus.DRAFT && document.application.status !== ApplicationStatus.CORRECTION_REQUIRED) {
+        throw new Error(`Forbidden: Cannot delete documents when application is in ${document.application.status} state`);
     }
 
     // Delete DB record
