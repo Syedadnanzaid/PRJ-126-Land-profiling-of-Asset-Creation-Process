@@ -1,22 +1,25 @@
 import prisma from '../../config/database';
-import { AssetStatus, ReviewStatus } from '@prisma/client';
+import { ApplicationStatus, ReviewStatus } from '@prisma/client';
 
 export const getDashboardAnalytics = async () => {
   // 1. Statistics
   const totalAssets = await prisma.landAsset.count();
   
-  const pendingReview = await prisma.landAsset.count({
-    where: { status: AssetStatus.UNDER_REVIEW }
+  const pendingReview = await prisma.landApplication.count({
+    where: { status: ApplicationStatus.UNDER_REVIEW }
   });
   
-  const approvedAssets = await prisma.landAsset.count({
-    where: { status: AssetStatus.APPROVED }
-  });
+  const approvedAssets = await prisma.landAsset.count(); // All LandAssets are approved records
   
-  const pendingWorkflows = await prisma.landAsset.count({
+  const pendingWorkflows = await prisma.landApplication.count({
     where: {
       status: {
-        in: [AssetStatus.SUBMITTED, AssetStatus.UNDER_REVIEW]
+        in: [
+          ApplicationStatus.SUBMITTED,
+          ApplicationStatus.UNDER_REVIEW,
+          ApplicationStatus.VERIFIED,
+          ApplicationStatus.PENDING_APPROVAL
+        ]
       }
     }
   });
@@ -39,22 +42,25 @@ export const getDashboardAnalytics = async () => {
   }));
 
   // 3. Workflow Status
-  const workflowStatusRaw = await prisma.landAsset.groupBy({
+  const workflowStatusRaw = await prisma.landApplication.groupBy({
     by: ['status'],
     _count: { status: true }
   });
   
-  const getCountForStatus = (status: AssetStatus) => {
+  const getCountForStatus = (status: ApplicationStatus | 'APPROVED') => {
+    if (status === 'APPROVED') {
+      return approvedAssets;
+    }
     const found = workflowStatusRaw.find(s => s.status === status);
     return found ? found._count.status : 0;
   };
 
   const workflowStatus = {
-    newSubmissions: getCountForStatus(AssetStatus.DRAFT),
-    underVerification: getCountForStatus(AssetStatus.UNDER_REVIEW),
-    sentForApproval: getCountForStatus(AssetStatus.SUBMITTED),
-    approved: getCountForStatus(AssetStatus.APPROVED),
-    rejected: getCountForStatus(AssetStatus.REJECTED)
+    newSubmissions: getCountForStatus(ApplicationStatus.DRAFT),
+    underVerification: getCountForStatus(ApplicationStatus.UNDER_REVIEW),
+    sentForApproval: getCountForStatus(ApplicationStatus.PENDING_APPROVAL),
+    approved: getCountForStatus('APPROVED'),
+    rejected: getCountForStatus(ApplicationStatus.REJECTED)
   };
 
   // 4. Geographic Assets
@@ -67,7 +73,6 @@ export const getDashboardAnalytics = async () => {
       asset_id: true,
       latitude: true,
       longitude: true,
-      status: true,
       asset_type: true
     }
   });
@@ -76,7 +81,7 @@ export const getDashboardAnalytics = async () => {
     asset_id: asset.asset_id,
     latitude: asset.latitude as number,
     longitude: asset.longitude as number,
-    status: asset.status,
+    status: 'APPROVED', // Keep contract stable for frontend
     asset_type: asset.asset_type
   }));
 
@@ -93,13 +98,13 @@ export const getDashboardAnalytics = async () => {
       longitude: true,
       asset_type: true,
       area: true,
-      status: true,
       created_at: true
     }
   });
 
   const recentAssets = recentAssetsRaw.map(asset => ({
     ...asset,
+    status: 'APPROVED', // Keep contract stable for frontend
     created_at: asset.created_at.toISOString()
   }));
 
@@ -110,6 +115,7 @@ export const getDashboardAnalytics = async () => {
     select: {
       event_id: true,
       asset_id: true,
+      application_id: true,
       event_type: true,
       metadata: true,
       created_at: true

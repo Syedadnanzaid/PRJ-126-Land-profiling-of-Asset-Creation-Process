@@ -9,23 +9,41 @@ export const checkDuplicateController = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        const { assetId, candidateAssetId } = req.body;
+        const { applicationId } = req.params;
+        const { candidateAssetId } = req.body;
+        const userId = (req as any).user?.user_id;
 
-        if (!assetId || !candidateAssetId) {
+        if (!applicationId || !candidateAssetId) {
             res.status(400).json({
                 status: 'error',
-                message: 'assetId and candidateAssetId are required'
+                message: 'applicationId and candidateAssetId are required'
             });
             return;
         }
 
-        const result = await checkDuplicate(assetId, candidateAssetId);
+        if (!userId) {
+            res.status(401).json({
+                status: 'error',
+                message: 'Unauthorized'
+            });
+            return;
+        }
+
+        const result = await checkDuplicate(applicationId, candidateAssetId, userId);
 
         res.status(200).json({
             status: 'success',
             data: result
         });
-    } catch (error) {
+    } catch (error: any) {
+        if (error.message.includes('not found')) {
+             res.status(404).json({ status: 'error', message: error.message });
+             return;
+        }
+        if (error.message.includes('must be UNDER_REVIEW') || error.message.includes('Invalid')) {
+             res.status(400).json({ status: 'error', message: error.message });
+             return;
+        }
         next(error);
     }
 };
@@ -66,19 +84,19 @@ export const reviewDuplicateController = async (
 
         const result = await reviewDuplicateFlag(flagId, userId, review_status as ReviewStatus, remarks);
 
-        if (!result) {
-            res.status(404).json({
-                status: 'error',
-                message: 'Duplicate flag not found'
-            });
-            return;
-        }
-
         res.status(200).json({
             status: 'success',
             data: result
         });
-    } catch (error) {
+    } catch (error: any) {
+        if (error.message === 'Duplicate flag not found') {
+            res.status(404).json({ status: 'error', message: error.message });
+            return;
+        }
+        if (error.message.includes('Only PENDING') || error.message.includes('Flag can only') || error.message.includes('Remarks are required')) {
+            res.status(400).json({ status: 'error', message: error.message });
+            return;
+        }
         next(error);
     }
 };

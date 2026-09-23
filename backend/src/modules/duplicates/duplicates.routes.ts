@@ -1,12 +1,22 @@
 import { Router } from 'express';
-import { authenticate } from '../../middleware/auth';
+import { authenticate, authorize } from '../../middleware/auth';
 import { checkDuplicateController, reviewDuplicateController } from './duplicates.controller';
+import { Role } from '@prisma/client';
 
-const router = Router();
+export const duplicateRoutes = Router();
+export const applicationDuplicateRoutes = Router({ mergeParams: true });
 
-router.use(authenticate);
+duplicateRoutes.use(authenticate);
+applicationDuplicateRoutes.use(authenticate);
 
-router.post('/check', checkDuplicateController);
-router.patch('/:flagId/review', reviewDuplicateController);
+applicationDuplicateRoutes.post(
+    '/check',
+    authorize(Role.VERIFICATION_OFFICER, Role.ADMIN),
+    checkDuplicateController
+);
 
-export default router;
+duplicateRoutes.patch(
+    '/:flagId/review',
+    authorize(Role.VERIFICATION_OFFICER, Role.APPROVING_AUTHORITY, Role.ADMIN),
+    reviewDuplicateController
+);
