@@ -16,3 +16,6 @@ Thumbs.db
 !**/.env.example
 
 .vscode/
+
+# Ignore backups
+backend/backups/

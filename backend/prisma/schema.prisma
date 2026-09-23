@@ -9,14 +9,18 @@ datasource db {
 
 enum Role {
   ADMIN
-  CREATOR
-  REVIEWER
+  APPLICANT
+  VERIFICATION_OFFICER
+  APPROVING_AUTHORITY
 }
 
-enum AssetStatus {
+enum ApplicationStatus {
   DRAFT
   SUBMITTED
   UNDER_REVIEW
+  CORRECTION_REQUIRED
+  VERIFIED
+  PENDING_APPROVAL
   APPROVED
   REJECTED
 }
@@ -28,12 +32,19 @@ enum ReviewStatus {
 }
 
 enum EventType {
-  ASSET_CREATED
-  ASSET_UPDATED
+  APPLICATION_CREATED
+  APPLICATION_SUBMITTED
   DOCUMENT_UPLOADED
-  STATUS_CHANGED
-  DUPLICATE_FLAGGED
-  DUPLICATE_REVIEWED
+  AI_DUPLICATE_CHECKED
+  REVIEW_STARTED
+  CORRECTION_REQUESTED
+  APPLICATION_RESUBMITTED
+  APPLICATION_VERIFIED
+  APPROVAL_REQUESTED
+  ASSET_APPROVED
+  ASSET_REJECTED
+  ASSET_CORRECTION_REQUESTED
+  ASSET_UPDATED
 }
 
 model User {
@@ -41,86 +52,113 @@ model User {
   name          String
   email         String   @unique
   password_hash String
-  role          Role     @default(CREATOR)
+  role          Role     @default(APPLICANT)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
   // Relations
-  land_assets      LandAsset[]       @relation("CreatedAssets")
+  applications     LandApplication[] @relation("CreatedApplications")
+  approved_assets  LandAsset[]       @relation("ApprovedAssets")
   uploaded_docs    Document[]        @relation("UploadedDocuments")
   workflow_actions WorkflowHistory[] @relation("ActionBy")
   reviewed_flags   DuplicateFlag[]   @relation("ReviewedBy")
   asset_events     AssetEvent[]      @relation("PerformedBy")
 }
 
-model LandAsset {
-  asset_id    String      @id @default(uuid())
-  land_id     String?
-  survey_no   String?
-  owner_name  String?
-  area        Float?
-  latitude    Float?
-  longitude   Float?
-  asset_type  String?
-  description String?
-  status      AssetStatus @default(DRAFT)
-  created_by  String
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
+model LandApplication {
+  application_id String            @id @default(uuid())
+  land_id        String?
+  survey_no      String?
+  owner_name     String?
+  area           Float?
+  latitude       Float?
+  longitude      Float?
+  asset_type     String?
+  description    String?
+  status         ApplicationStatus @default(DRAFT)
+  applicant_id   String
+  created_at     DateTime          @default(now())
+  updated_at     DateTime          @updatedAt
 
   // Relations
-  creator         User              @relation("CreatedAssets", fields: [created_by], references: [user_id], onDelete: Restrict)
+  applicant       User              @relation("CreatedApplications", fields: [applicant_id], references: [user_id], onDelete: Restrict)
   documents       Document[]
   workflow        WorkflowHistory[]
   events          AssetEvent[]
-  duplicate_flags DuplicateFlag[]   @relation("AssetFlags")
-  matched_flags   DuplicateFlag[]   @relation("MatchedAssetFlags")
+  duplicate_flags DuplicateFlag[]   @relation("ApplicationFlags")
+  approved_asset  LandAsset?
 
   @@index([survey_no])
   @@index([owner_name])
-  @@index([created_by])
+  @@index([applicant_id])
   @@index([status])
 }
 
-model Document {
-  document_id   String   @id @default(uuid())
-  asset_id      String
-  file_name     String
-  document_type String?
-  storage_key   String
-  mime_type     String?
-  file_size     Int?
-  uploaded_by   String
-  uploaded_at   DateTime @default(now())
+model LandAsset {
+  asset_id       String   @id @default(uuid())
+  application_id String   @unique
+  land_id        String?
+  survey_no      String?
+  owner_name     String?
+  area           Float?
+  latitude       Float?
+  longitude      Float?
+  asset_type     String?
+  description    String?
+  approved_by    String
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
 
   // Relations
-  asset    LandAsset @relation(fields: [asset_id], references: [asset_id], onDelete: Cascade)
-  uploader User      @relation("UploadedDocuments", fields: [uploaded_by], references: [user_id], onDelete: Restrict)
+  application   LandApplication @relation(fields: [application_id], references: [application_id], onDelete: Restrict)
+  approver      User            @relation("ApprovedAssets", fields: [approved_by], references: [user_id], onDelete: Restrict)
+  events        AssetEvent[]
+  matched_flags DuplicateFlag[] @relation("MatchedAssetFlags")
 
-  @@index([asset_id])
+  @@index([survey_no])
+  @@index([owner_name])
+  @@index([approved_by])
+}
+
+model Document {
+  document_id    String   @id @default(uuid())
+  application_id String
+  file_name      String
+  document_type  String?
+  storage_key    String
+  mime_type      String?
+  file_size      Int?
+  uploaded_by    String
+  uploaded_at    DateTime @default(now())
+
+  // Relations
+  application LandApplication @relation(fields: [application_id], references: [application_id], onDelete: Cascade)
+  uploader    User            @relation("UploadedDocuments", fields: [uploaded_by], references: [user_id], onDelete: Restrict)
+
+  @@index([application_id])
   @@index([uploaded_by])
 }
 
 model WorkflowHistory {
-  history_id      String       @id @default(uuid())
-  asset_id        String
-  previous_status AssetStatus?
-  new_status      AssetStatus
+  history_id      String             @id @default(uuid())
+  application_id  String
+  previous_status ApplicationStatus?
+  new_status      ApplicationStatus
   action_by       String
   remarks         String?
-  action_time     DateTime     @default(now())
+  action_time     DateTime           @default(now())
 
   // Relations
-  land_asset LandAsset @relation(fields: [asset_id], references: [asset_id], onDelete: Restrict)
-  user       User      @relation("ActionBy", fields: [action_by], references: [user_id], onDelete: Restrict)
+  application LandApplication @relation(fields: [application_id], references: [application_id], onDelete: Restrict)
+  user        User            @relation("ActionBy", fields: [action_by], references: [user_id], onDelete: Restrict)
 
-  @@index([asset_id])
+  @@index([application_id])
   @@index([action_by])
 }
 
 model DuplicateFlag {
   flag_id             String       @id @default(uuid())
-  asset_id            String
+  application_id      String
   matched_asset_id    String
   similarity_score    Float
   survey_similarity   Float?
@@ -135,27 +173,30 @@ model DuplicateFlag {
   created_at          DateTime     @default(now())
 
   // Relations
-  asset         LandAsset @relation("AssetFlags", fields: [asset_id], references: [asset_id], onDelete: Cascade)
-  matched_asset LandAsset @relation("MatchedAssetFlags", fields: [matched_asset_id], references: [asset_id], onDelete: Cascade)
-  reviewer      User?     @relation("ReviewedBy", fields: [reviewed_by], references: [user_id], onDelete: SetNull)
+  application   LandApplication @relation("ApplicationFlags", fields: [application_id], references: [application_id], onDelete: Cascade)
+  matched_asset LandAsset       @relation("MatchedAssetFlags", fields: [matched_asset_id], references: [asset_id], onDelete: Cascade)
+  reviewer      User?           @relation("ReviewedBy", fields: [reviewed_by], references: [user_id], onDelete: SetNull)
 
-  @@index([asset_id])
+  @@index([application_id])
   @@index([matched_asset_id])
   @@index([review_status])
 }
 
 model AssetEvent {
-  event_id     String    @id @default(uuid())
-  asset_id     String
-  event_type   EventType
-  performed_by String
-  metadata     Json?
-  created_at   DateTime  @default(now())
+  event_id       String    @id @default(uuid())
+  application_id String?
+  asset_id       String?
+  event_type     EventType
+  performed_by   String
+  metadata       Json?
+  created_at     DateTime  @default(now())
 
   // Relations
-  asset LandAsset @relation(fields: [asset_id], references: [asset_id], onDelete: Restrict)
-  user  User      @relation("PerformedBy", fields: [performed_by], references: [user_id], onDelete: Restrict)
+  application LandApplication? @relation(fields: [application_id], references: [application_id], onDelete: SetNull)
+  asset       LandAsset?       @relation(fields: [asset_id], references: [asset_id], onDelete: SetNull)
+  user        User             @relation("PerformedBy", fields: [performed_by], references: [user_id], onDelete: Restrict)
 
+  @@index([application_id])
   @@index([asset_id])
   @@index([performed_by])
 }
