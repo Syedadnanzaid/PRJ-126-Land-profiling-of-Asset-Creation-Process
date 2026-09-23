@@ -5,11 +5,13 @@ import analyticsRoutes from '../modules/analytics/analytics.routes';
 import duplicatesRoutes from '../modules/duplicates/duplicates.routes';
 import { documentRoutes } from '../modules/documents/documents.routes';
 import workflowRoutes from '../modules/workflow/workflow.routes';
+import applicationsRoutes from '../modules/applications/applications.routes';
 
 const router = Router();
 
 router.use('/auth', authRoutes);
 router.use('/assets', assetsRoutes);
+router.use('/applications', applicationsRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/duplicates', duplicatesRoutes);
 router.use('/documents', documentRoutes);
