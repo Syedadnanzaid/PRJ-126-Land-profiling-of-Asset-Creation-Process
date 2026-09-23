@@ -15,6 +15,6 @@ router.use('/applications', applicationsRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/duplicates', duplicatesRoutes);
 router.use('/documents', documentRoutes);
-router.use('/assets/:assetId/workflow', workflowRoutes);
+router.use('/applications/:applicationId/workflow', workflowRoutes);
 
 export default router;

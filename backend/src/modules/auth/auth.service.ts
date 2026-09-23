@@ -66,7 +66,7 @@ export const registerUser = async (name?: string, email?: string, password?: str
       name: trimmedName,
       email: normalizedEmail,
       password_hash: passwordHash,
-      role: Role.CREATOR, // Always CREATOR for public registration
+      role: Role.APPLICANT, // Always APPLICANT for public registration
     },
     select: {
       user_id: true,
