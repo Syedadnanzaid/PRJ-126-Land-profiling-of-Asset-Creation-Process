@@ -4,6 +4,7 @@ import authRoutes from '../modules/auth/auth.routes';
 import analyticsRoutes from '../modules/analytics/analytics.routes';
 import duplicatesRoutes from '../modules/duplicates/duplicates.routes';
 import { documentRoutes } from '../modules/documents/documents.routes';
+import workflowRoutes from '../modules/workflow/workflow.routes';
 
 const router = Router();
 
@@ -12,5 +13,6 @@ router.use('/assets', assetsRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/duplicates', duplicatesRoutes);
 router.use('/documents', documentRoutes);
+router.use('/assets/:assetId/workflow', workflowRoutes);
 
 export default router;
