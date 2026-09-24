@@ -28,8 +28,16 @@ export async function registerUser(name: string, email: string, password: string
   });
 }
 
+interface GetUserResponse {
+  status: string;
+  data: {
+    user: User;
+  };
+}
+
 export async function getCurrentUser(): Promise<User | null> {
-  return apiRequest<User>('/auth/me');
+  const response = await apiRequest<GetUserResponse>('/auth/me');
+  return response?.data?.user || null;
 }
 
 export function logoutUser(): void {

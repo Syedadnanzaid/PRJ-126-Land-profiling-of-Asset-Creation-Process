@@ -1,58 +1,60 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { loginUser, getCurrentUser } from '../../services/authService';
+import { registerUser } from '../../services/authService';
 import {
   IconEye, IconEyeOff, IconDatabase, IconMapPin, IconShield,
-  IconCloud, IconEnvelope, IconLock, IconBuilding, IconUsers,
+  IconCloud, IconEnvelope, IconLock, IconUsers,
   IconGlobe, IconChevronDown
 } from '../icons/Icons';
 import logo from '../../assets/land-asset-governance-logo.png';
 import './Login.css';
 
-const Login = () => {
+const Register = () => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password) {
-      setError('Please enter both email and password.');
+    if (!name || !email || !password || !confirmPassword) {
+      setError('Please fill in all fields.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
       return;
     }
 
     setLoading(true);
     setError(null);
+    setSuccess(null);
 
     try {
-      const response = await loginUser(email, password);
-      const res = response as unknown as { data?: { token?: string }, token?: string } | null;
-      const token = res?.token || res?.data?.token;
-
-      if (token) {
-        localStorage.setItem('token', token);
-        try {
-          const user = await getCurrentUser();
-          if (user?.role === 'APPLICANT') {
-            navigate('/applications');
-          } else {
-            navigate('/dashboard');
-          }
-        } catch (e) {
-          navigate('/dashboard');
-        }
+      const response = await registerUser(name, email, password);
+      // The response payload and success condition depend on backend implementation
+      if (response) {
+        setSuccess('Registration successful! Redirecting to login...');
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
       } else {
-        setError('Login failed: Invalid server response.');
+        setError('Registration failed: Invalid server response.');
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
       if (err instanceof Error) {
         setError(err.message);
+      } else if (err?.response?.data?.message) {
+        setError(err.response.data.message);
       } else {
-        setError('An unexpected error occurred during login.');
+        setError('An unexpected error occurred during registration.');
       }
     } finally {
       setLoading(false);
@@ -105,17 +107,36 @@ const Login = () => {
         <div className="login-card-wrapper">
           <div className="login-card">
             <div className="login-form-section">
-              <h2 className="login-heading">Welcome Back</h2>
+              <h2 className="login-heading">Create Account</h2>
               <p className="login-subtitle">
-                Sign in to your Land Asset Governance Platform
+                Register as an Applicant on the Land Asset Governance Platform
               </p>
 
-              <form className="login-form" onSubmit={handleLogin}>
+              <form className="login-form" onSubmit={handleRegister}>
                 {error && (
                   <div className="login-error-message">
                     {error}
                   </div>
                 )}
+                {success && (
+                  <div className="login-success-message" style={{ color: 'green', marginBottom: '1rem', padding: '0.75rem', backgroundColor: '#e6ffe6', border: '1px solid green', borderRadius: '4px' }}>
+                    {success}
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label htmlFor="name">Full Name</label>
+                  <div className="input-with-icon">
+                    <IconUsers className="input-icon" />
+                    <input
+                      type="text"
+                      id="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="John Doe"
+                    />
+                  </div>
+                </div>
 
                 <div className="form-group">
                   <label htmlFor="email">Email Address</label>
@@ -126,7 +147,7 @@ const Login = () => {
                       id="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="admin@example.com"
+                      placeholder="john@example.com"
                     />
                   </div>
                 </div>
@@ -140,7 +161,7 @@ const Login = () => {
                       id="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
+                      placeholder="Create a password"
                     />
                     <button
                       type="button"
@@ -153,28 +174,26 @@ const Login = () => {
                   </div>
                 </div>
 
-                <div className="forgot-password">
-                  <a href="#">Forgot password?</a>
+                <div className="form-group">
+                  <label htmlFor="confirmPassword">Confirm Password</label>
+                  <div className="password-input-wrapper input-with-icon">
+                    <IconLock className="input-icon" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      id="confirmPassword"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm your password"
+                    />
+                  </div>
                 </div>
 
                 <button type="submit" className="login-submit-btn" disabled={loading}>
-                  {loading ? 'Signing In...' : 'Sign In'}
-                </button>
-
-                <div className="login-divider">
-                  <span>OR</span>
-                </div>
-
-                <button type="button" className="gov-sso-btn">
-                  <IconBuilding /> Government SSO
+                  {loading ? 'Registering...' : 'Register'}
                 </button>
 
                 <p className="admin-contact" style={{ textAlign: 'center', marginTop: '1rem' }}>
-                  Don't have an account? <Link to="/register" className="contact-highlight">Register</Link>
-                </p>
-
-                <p className="admin-contact">
-                  Need access? <span className="contact-highlight">Contact your administrator.</span>
+                  Already have an account? <Link to="/login" className="contact-highlight">Login</Link>
                 </p>
               </form>
             </div>
@@ -223,4 +242,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;

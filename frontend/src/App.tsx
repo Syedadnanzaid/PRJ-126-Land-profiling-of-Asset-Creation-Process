@@ -2,11 +2,15 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import Dashboard from './components/pages/Dashboard';
 import PlaceholderPage from './components/pages/PlaceholderPage';
-import LandAssets from './components/pages/LandAssets';
 import AddAsset from './components/pages/AddAsset';
 import AssetDetails from './components/pages/AssetDetails';
 import Login from './components/pages/Login';
+import Register from './components/pages/Register';
+import ApplicationDashboard from './components/pages/ApplicationDashboard';
+import ApplicationDetails from './components/pages/ApplicationDetails';
+import AssetRegistry from './components/pages/AssetRegistry';
 import { ProtectedRoute } from './routes/ProtectedRoute';
+import { RoleProtectedRoute, Role } from './components/auth/RoleProtectedRoute';
 import { 
   IconGisMap, IconDocuments, 
   IconDuplicateDetection, IconWorkflow, IconAnalytics 
@@ -17,6 +21,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
       
       <Route path="/*" element={
         <ProtectedRoute>
@@ -28,12 +33,40 @@ function App() {
                 element={<Dashboard />} 
               />
               <Route 
-                path="/assets" 
-                element={<LandAssets />} 
+                path="/applications" 
+                element={
+                  <RoleProtectedRoute allowedRoles={[Role.APPLICANT]}>
+                    <ApplicationDashboard />
+                  </RoleProtectedRoute>
+                } 
               />
               <Route 
-                path="/assets/new" 
-                element={<AddAsset />} 
+                path="/applications/new" 
+                element={
+                  <RoleProtectedRoute allowedRoles={[Role.APPLICANT]}>
+                    <AddAsset />
+                  </RoleProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/applications/:applicationId" 
+                element={
+                  <RoleProtectedRoute allowedRoles={[Role.APPLICANT, Role.VERIFICATION_OFFICER, Role.APPROVING_AUTHORITY, Role.ADMIN]}>
+                    <ApplicationDetails />
+                  </RoleProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/applications/:applicationId/edit" 
+                element={
+                  <RoleProtectedRoute allowedRoles={[Role.APPLICANT]}>
+                    <AddAsset />
+                  </RoleProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/assets" 
+                element={<AssetRegistry />} 
               />
               <Route 
                 path="/assets/:assetId" 

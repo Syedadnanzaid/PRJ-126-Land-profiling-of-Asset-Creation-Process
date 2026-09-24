@@ -20,9 +20,6 @@ export interface LandAsset {
   documents?: any[];
 }
 
-export type CreateAssetInput = Omit<Partial<LandAsset>, 'asset_id' | 'created_by' | 'created_at' | 'updated_at'>;
-export type UpdateAssetInput = CreateAssetInput;
-
 export interface AssetResponse {
   status: string;
   data: LandAsset;
@@ -33,11 +30,6 @@ export interface AssetsListResponse {
   data: LandAsset[];
 }
 
-export interface DeleteResponse {
-  status: string;
-  message: string;
-}
-
 export async function getAssets(): Promise<AssetsListResponse | null> {
   return apiRequest<AssetsListResponse>('/assets');
 }
@@ -46,22 +38,39 @@ export async function getAssetById(assetId: string): Promise<AssetResponse | nul
   return apiRequest<AssetResponse>(`/assets/${assetId}`);
 }
 
-export async function createAsset(data: CreateAssetInput): Promise<AssetResponse | null> {
-  return apiRequest<AssetResponse>('/assets', {
+// --- Workflow Actions ---
+
+export async function submitAssetForReview(assetId: string, remarks?: string): Promise<AssetResponse | null> {
+  return apiRequest<AssetResponse>(`/assets/${assetId}/workflow/submit`, {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify({ remarks }),
   });
 }
 
-export async function updateAsset(assetId: string, data: UpdateAssetInput): Promise<AssetResponse | null> {
-  return apiRequest<AssetResponse>(`/assets/${assetId}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
+export async function startAssetReview(assetId: string, remarks?: string): Promise<AssetResponse | null> {
+  return apiRequest<AssetResponse>(`/assets/${assetId}/workflow/review`, {
+    method: 'POST',
+    body: JSON.stringify({ remarks }),
   });
 }
 
-export async function deleteAsset(assetId: string): Promise<DeleteResponse | null> {
-  return apiRequest<DeleteResponse>(`/assets/${assetId}`, {
-    method: 'DELETE',
+export async function approveAsset(assetId: string, remarks?: string): Promise<AssetResponse | null> {
+  return apiRequest<AssetResponse>(`/assets/${assetId}/workflow/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ remarks }),
+  });
+}
+
+export async function rejectAsset(assetId: string, remarks?: string): Promise<AssetResponse | null> {
+  return apiRequest<AssetResponse>(`/assets/${assetId}/workflow/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ remarks }),
+  });
+}
+
+export async function resubmitAsset(assetId: string, remarks?: string): Promise<AssetResponse | null> {
+  return apiRequest<AssetResponse>(`/assets/${assetId}/workflow/resubmit`, {
+    method: 'POST',
+    body: JSON.stringify({ remarks }),
   });
 }

@@ -1,15 +1,20 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { createAsset } from '../../services/assetService';
-import type { CreateAssetInput } from '../../services/assetService';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { createApplication, getApplicationById, updateApplication } from '../../services/applicationService';
+import type { LandApplication } from '../../services/applicationService';
 import { IconFile, IconUsers, IconMapPin, IconSend } from '../icons/Icons';
 import './AddAsset.css';
 
 const AddAsset = () => {
+  const { applicationId } = useParams<{ applicationId?: string }>();
+  const isEditMode = !!applicationId;
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(isEditMode);
   const [error, setError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<boolean>(false);
   const [success, setSuccess] = useState<string | null>(null);
+  const [correctionRemarks, setCorrectionRemarks] = useState<string | null>(null);
 
   const initialFormState = {
     land_id: '',
@@ -22,6 +27,51 @@ const AddAsset = () => {
     description: ''
   };
   const [formData, setFormData] = useState(initialFormState);
+
+  useEffect(() => {
+    if (isEditMode && applicationId) {
+      const fetchApp = async () => {
+        try {
+          const res = await getApplicationById(applicationId);
+          if (res && res.data) {
+            const app = res.data;
+            if (app.status !== 'DRAFT' && app.status !== 'CORRECTION_REQUIRED') {
+              navigate(`/applications/${applicationId}`);
+              return;
+            }
+            
+            if (app.status === 'CORRECTION_REQUIRED' && app.workflow) {
+              const correctionEvents = app.workflow.filter(w => w.new_status === 'CORRECTION_REQUIRED');
+              if (correctionEvents.length > 0) {
+                correctionEvents.sort((a, b) => new Date(b.action_time).getTime() - new Date(a.action_time).getTime());
+                setCorrectionRemarks(correctionEvents[0].remarks || 'No remarks provided.');
+              }
+            }
+
+            setFormData({
+              land_id: app.land_id || '',
+              survey_no: app.survey_no || '',
+              owner_name: app.owner_name || '',
+              area: app.area != null ? app.area.toString() : '',
+              latitude: app.latitude != null ? app.latitude.toString() : '',
+              longitude: app.longitude != null ? app.longitude.toString() : '',
+              asset_type: app.asset_type || '',
+              description: app.description || ''
+            });
+          } else {
+            setError("Unable to load application.");
+            setFetchError(true);
+          }
+        } catch (err) {
+          setError("Unable to load application.");
+          setFetchError(true);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchApp();
+    }
+  }, [applicationId, isEditMode, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -59,7 +109,7 @@ const AddAsset = () => {
 
     setIsSubmitting(true);
     try {
-      const payload: CreateAssetInput = {
+      const payload: Partial<LandApplication> = {
         land_id: formData.land_id.trim(),
         survey_no: formData.survey_no.trim(),
         owner_name: formData.owner_name.trim(),
@@ -67,25 +117,57 @@ const AddAsset = () => {
         latitude: latVal,
         longitude: lngVal,
         asset_type: formData.asset_type.trim(),
-        description: formData.description.trim() || null,
-        status: 'DRAFT'
+        description: formData.description.trim() || null
       };
 
-      const response = await createAsset(payload);
-      if (response && response.status === 'success') {
-        setSuccess("Land asset created successfully.");
-        setFormData(initialFormState);
-        setTimeout(() => {
-          navigate('/assets');
-        }, 1500);
+      if (isEditMode && applicationId) {
+        const response = await updateApplication(applicationId, payload);
+        if (response && response.status === 'success') {
+          setSuccess("Land application updated successfully.");
+          setTimeout(() => {
+            navigate(`/applications/${applicationId}`);
+          }, 1500);
+        } else {
+          throw new Error('Update failed');
+        }
       } else {
-        throw new Error('Creation failed');
+        const response = await createApplication(payload);
+        if (response && response.status === 'success') {
+          setSuccess("Land application created successfully.");
+          setFormData(initialFormState);
+          setTimeout(() => {
+            if (response.data && response.data.application_id) {
+              navigate(`/applications/${response.data.application_id}`);
+            } else {
+              navigate('/applications');
+            }
+          }, 1500);
+        } else {
+          throw new Error('Creation failed');
+        }
       }
     } catch (err) {
-      setError("Unable to create land asset. Please try again.");
+      setError(`Unable to ${isEditMode ? 'update' : 'create'} land application. Please try again.`);
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="add-asset-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <p style={{ fontSize: '1.2rem', color: '#475569' }}>Loading application...</p>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="add-asset-page" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <div className="add-asset-alert add-asset-alert-error" style={{ marginBottom: '16px' }}>{error}</div>
+        <button className="add-asset-btn-secondary" onClick={() => navigate('/applications')}>Back to Applications</button>
+      </div>
+    );
+  }
 
   return (
     <div className="add-asset-page">
@@ -95,18 +177,24 @@ const AddAsset = () => {
           <div className="hero-overlay"></div>
           <div className="hero-content">
             <p className="hero-breadcrumb">
-              LAND ASSETS &gt; <span>ADD NEW ASSET</span>
+              APPLICATIONS &gt; <span>{isEditMode ? 'EDIT APPLICATION' : 'CREATE APPLICATION'}</span>
             </p>
-            <h1 className="hero-title">Add New Land Asset</h1>
-            <p className="hero-subtitle">Register a new land asset with complete and accurate details.</p>
+            <h1 className="hero-title">{isEditMode ? 'Edit Land Application' : 'Create Land Application'}</h1>
+            <p className="hero-subtitle">{isEditMode ? 'Update the details of your land application.' : 'Start a new land application with complete and accurate details.'}</p>
           </div>
         </section>
       </div>
 
       <div className="add-asset-container">
         <form onSubmit={handleSubmit} className="add-asset-form">
-          {error && <div className="add-asset-alert add-asset-alert-error">{error}</div>}
+          {error && !fetchError && <div className="add-asset-alert add-asset-alert-error">{error}</div>}
           {success && <div className="add-asset-alert add-asset-alert-success">{success}</div>}
+          
+          {correctionRemarks && (
+            <div className="add-asset-alert add-asset-alert-error" style={{ backgroundColor: '#FFFBEB', color: '#92400E', borderLeft: '4px solid #F59E0B' }}>
+              <strong>Correction Required: </strong> {correctionRemarks}
+            </div>
+          )}
 
           {/* Section 1: Asset Information */}
           <section className="add-asset-section">
@@ -274,11 +362,11 @@ const AddAsset = () => {
             <div className="add-asset-system-info">
               <div className="system-info-item">
                 <span className="system-info-label">Asset ID</span>
-                <span className="system-info-badge">Auto-generated after creation</span>
+                <span className="system-info-badge">{isEditMode ? formData.land_id || 'Auto-generated' : 'Auto-generated after creation'}</span>
               </div>
               <div className="system-info-item">
                 <span className="system-info-label">Status</span>
-                <span className="system-info-badge">Draft after creation</span>
+                <span className="system-info-badge">{isEditMode ? 'Editing' : 'Draft after creation'}</span>
               </div>
             </div>
 
@@ -286,7 +374,7 @@ const AddAsset = () => {
               <button 
                 type="button" 
                 className="add-asset-btn-secondary" 
-                onClick={() => navigate('/assets')} 
+                onClick={() => navigate(isEditMode ? `/applications/${applicationId}` : '/applications')} 
                 disabled={isSubmitting}
               >
                 Cancel
@@ -297,7 +385,7 @@ const AddAsset = () => {
                 disabled={isSubmitting}
               >
                 <IconSend width={18} height={18} />
-                {isSubmitting ? 'Creating...' : 'Create Asset'}
+                {isSubmitting ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Asset')}
               </button>
             </div>
           </div>
