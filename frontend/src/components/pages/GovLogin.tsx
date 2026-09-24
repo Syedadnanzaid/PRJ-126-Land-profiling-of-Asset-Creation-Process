@@ -3,13 +3,12 @@ import { useNavigate, Link } from 'react-router-dom';
 import { loginUser, getCurrentUser } from '../../services/authService';
 import {
   IconEye, IconEyeOff, IconDatabase, IconMapPin, IconShield,
-  IconCloud, IconEnvelope, IconLock, IconBuilding, IconUsers,
-  IconGlobe, IconChevronDown
+  IconCloud, IconEnvelope, IconLock, IconGlobe, IconChevronDown
 } from '../icons/Icons';
 import logo from '../../assets/land-asset-governance-logo.png';
 import './Login.css';
 
-const Login = () => {
+const GovLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -21,7 +20,7 @@ const Login = () => {
     e.preventDefault();
 
     if (!email || !password) {
-      setError('Please enter both email and password.');
+      setError('Please enter both Official Email / Employee ID and password.');
       return;
     }
 
@@ -37,11 +36,13 @@ const Login = () => {
         localStorage.setItem('token', token);
         try {
           const user = await getCurrentUser();
-          if (user?.role === 'APPLICANT') {
-            navigate('/applications');
+          
+          if (user && (user.role === 'VERIFICATION_OFFICER' || user.role === 'APPROVING_AUTHORITY' || user.role === 'ADMIN')) {
+            navigate('/gov-auth-success');
           } else {
+            // Revert token and logout if unauthorized
             localStorage.removeItem('token');
-            setError('Please use the Government SSO for employee access.');
+            setError('This sign-in is restricted to authorized government personnel.');
           }
         } catch (e) {
           localStorage.removeItem('token');
@@ -106,10 +107,10 @@ const Login = () => {
 
         <div className="login-card-wrapper">
           <div className="login-card">
-            <div className="login-form-section">
-              <h2 className="login-heading">Welcome Back</h2>
+            <div className="login-form-section" style={{ width: '100%', borderRight: 'none' }}>
+              <h2 className="login-heading">Government Authentication</h2>
               <p className="login-subtitle">
-                Sign in to your Land Asset Governance Platform
+                Secure access for authorized government personnel.
               </p>
 
               <form className="login-form" onSubmit={handleLogin}>
@@ -120,15 +121,15 @@ const Login = () => {
                 )}
 
                 <div className="form-group">
-                  <label htmlFor="email">Email Address</label>
+                  <label htmlFor="email">Official Email / Employee ID</label>
                   <div className="input-with-icon">
                     <IconEnvelope className="input-icon" />
                     <input
-                      type="email"
+                      type="text"
                       id="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="admin@example.com"
+                      placeholder="officer@gov.test"
                     />
                   </div>
                 </div>
@@ -155,54 +156,19 @@ const Login = () => {
                   </div>
                 </div>
 
-                <div className="forgot-password">
-                  <a href="#">Forgot password?</a>
-                </div>
-
-                <button type="submit" className="login-submit-btn" disabled={loading}>
-                  {loading ? 'Signing In...' : 'Sign In'}
+                <button type="submit" className="login-submit-btn" disabled={loading} style={{ marginTop: '12px' }}>
+                  {loading ? 'Authenticating...' : 'Secure Sign In'}
                 </button>
 
-                <div className="login-divider">
-                  <span>OR</span>
-                </div>
-
-                <button type="button" className="gov-sso-btn" onClick={() => navigate('/gov-login')}>
-                  <IconBuilding /> Government SSO
-                </button>
-
-                <p className="admin-contact" style={{ textAlign: 'center', marginTop: '1rem' }}>
-                  Don't have an account? <Link to="/register" className="contact-highlight">Register</Link>
+                <p className="admin-contact" style={{ textAlign: 'center', marginTop: '24px' }}>
+                  <IconShield width={16} height={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '4px' }} />
+                  Authorized government personnel only.
                 </p>
-
-                <p className="admin-contact">
-                  Need access? <span className="contact-highlight">Contact your administrator.</span>
+                
+                <p className="admin-contact" style={{ marginTop: '16px' }}>
+                  <Link to="/login" className="contact-highlight">&larr; Back to Applicant Login</Link>
                 </p>
               </form>
-            </div>
-
-            <div className="login-benefits">
-              <div className="benefit">
-                <div className="benefit-icon-wrapper"><IconShield /></div>
-                <div>
-                  <h3>Secure Access</h3>
-                  <p>Your data is protected with enterprise-grade security</p>
-                </div>
-              </div>
-              <div className="benefit">
-                <div className="benefit-icon-wrapper"><IconUsers /></div>
-                <div>
-                  <h3>Role-Based Access</h3>
-                  <p>Access the tools and information relevant to your role</p>
-                </div>
-              </div>
-              <div className="benefit">
-                <div className="benefit-icon-wrapper"><IconCloud /></div>
-                <div>
-                  <h3>Anywhere, Anytime</h3>
-                  <p>Access from any device with a secure connection</p>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -225,4 +191,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default GovLogin;

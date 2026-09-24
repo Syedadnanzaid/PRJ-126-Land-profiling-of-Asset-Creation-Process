@@ -79,6 +79,8 @@ export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRout
     // Redirect to a safe existing dashboard page if unauthorized
     if (userRole === Role.APPLICANT) {
       return <Navigate to="/applications" replace />;
+    } else if (userRole === Role.VERIFICATION_OFFICER) {
+      return <Navigate to="/verification-queue" replace />;
     }
     return <Navigate to="/dashboard" replace />;
   }

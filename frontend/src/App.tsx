@@ -6,6 +6,8 @@ import AddAsset from './components/pages/AddAsset';
 import AssetDetails from './components/pages/AssetDetails';
 import Login from './components/pages/Login';
 import Register from './components/pages/Register';
+import GovLogin from './components/pages/GovLogin';
+import GovAuthSuccess from './components/pages/GovAuthSuccess';
 import ApplicationDashboard from './components/pages/ApplicationDashboard';
 import ApplicationDetails from './components/pages/ApplicationDetails';
 import VerificationQueue from './components/pages/VerificationQueue';
@@ -23,6 +25,8 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/gov-login" element={<GovLogin />} />
+      <Route path="/gov-auth-success" element={<GovAuthSuccess />} />
       
       <Route path="/*" element={
         <ProtectedRoute>
