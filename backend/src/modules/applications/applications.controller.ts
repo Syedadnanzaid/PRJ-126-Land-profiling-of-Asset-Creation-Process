@@ -30,14 +30,25 @@ export const createApplication = async (req: Request, res: Response, next: NextF
 
 export const getApplications = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    if (!req.user || !req.user.user_id) {
+    if (!req.user || !req.user.user_id || !req.user.role) {
       return res.status(401).json({ status: 'error', message: 'Unauthorized' });
     }
 
-    // Role: APPLICANT -> return only applications belonging to req.user.user_id
-    // Wait, the specification says "GET /api/applications Role: APPLICANT Purpose: return only applications belonging to req.user.user_id."
-    // Phase 1 doesn't say anything about other roles for GET /
-    const applications = await applicationsService.getApplicationsByApplicant(req.user.user_id);
+    let applications;
+
+    if (req.user.role === 'APPLICANT') {
+      // APPLICANT: return ONLY applications belonging to authenticated user_id
+      applications = await applicationsService.getApplicationsByApplicant(req.user.user_id);
+    } else if (req.user.role === 'VERIFICATION_OFFICER') {
+      // VERIFICATION_OFFICER: return verification queue
+      applications = await applicationsService.getVerificationQueueApplications();
+    } else if (req.user.role === 'ADMIN') {
+      // ADMIN: return all
+      applications = await applicationsService.getAllApplications();
+    } else {
+      return res.status(403).json({ status: 'error', message: 'Forbidden' });
+    }
+
     res.status(200).json({ status: 'success', data: applications });
   } catch (error) {
     next(error);

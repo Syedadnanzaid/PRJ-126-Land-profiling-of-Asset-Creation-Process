@@ -8,7 +8,7 @@ router.use(authenticate);
 
 // APPLICANT only routes
 router.post('/', authorize('APPLICANT'), applicationsController.createApplication);
-router.get('/', authorize('APPLICANT'), applicationsController.getApplications);
+router.get('/', authorize('APPLICANT', 'VERIFICATION_OFFICER', 'ADMIN'), applicationsController.getApplications);
 router.patch('/:applicationId', authorize('APPLICANT'), applicationsController.updateApplication);
 
 // Authorized view (roles check inside controller logic for APPLICANT)

@@ -41,6 +41,66 @@ export const getApplicationsByApplicant = async (applicantId: string) => {
   });
 };
 
+export const getVerificationQueueApplications = async () => {
+  return prisma.landApplication.findMany({
+    where: {
+      status: {
+        in: [
+          ApplicationStatus.SUBMITTED,
+          ApplicationStatus.UNDER_REVIEW,
+          ApplicationStatus.CORRECTION_REQUIRED,
+          ApplicationStatus.VERIFIED
+        ]
+      }
+    },
+    orderBy: { updated_at: 'desc' },
+    select: {
+      application_id: true,
+      survey_no: true,
+      owner_name: true,
+      area: true,
+      latitude: true,
+      longitude: true,
+      asset_type: true,
+      description: true,
+      status: true,
+      created_at: true,
+      updated_at: true,
+      applicant: {
+        select: {
+          name: true,
+          email: true
+        }
+      }
+    }
+  });
+};
+
+export const getAllApplications = async () => {
+  return prisma.landApplication.findMany({
+    orderBy: { updated_at: 'desc' },
+    select: {
+      application_id: true,
+      survey_no: true,
+      owner_name: true,
+      area: true,
+      latitude: true,
+      longitude: true,
+      asset_type: true,
+      description: true,
+      status: true,
+      created_at: true,
+      updated_at: true,
+      applicant: {
+        select: {
+          name: true,
+          email: true
+        }
+      }
+    }
+  });
+};
+
 export const getApplicationById = async (applicationId: string) => {
   return prisma.landApplication.findUnique({
     where: { application_id: applicationId },

@@ -4,7 +4,7 @@ import './Sidebar.css';
 import { 
   IconDashboard, IconLandAssets, IconGisMap, 
   IconDocuments, IconDuplicateDetection, IconWorkflow, IconAnalytics,
-  IconFile, IconLogOut
+  IconFile, IconLogOut, IconList
 } from '../icons/Icons';
 import logo from '../../assets/land-asset-governance-logo.png';
 import { getCurrentUser, logoutUser } from '../../services/authService';
@@ -38,13 +38,20 @@ const Sidebar = () => {
 
   let navItems: { name: string; path?: string; icon: ReactNode; action?: () => void }[] = [
     { name: 'Dashboard', path: '/dashboard', icon: <IconDashboard /> },
+  ];
+
+  if (userRole === Role.VERIFICATION_OFFICER || userRole === Role.ADMIN) {
+    navItems.push({ name: 'Verification Queue', path: '/verification-queue', icon: <IconList /> });
+  }
+
+  navItems.push(
     { name: 'Land Assets', path: '/assets', icon: <IconLandAssets /> },
     { name: 'GIS Map', path: '/gis', icon: <IconGisMap /> },
     { name: 'Documents', path: '/documents', icon: <IconDocuments /> },
     { name: 'Duplicate Detection', path: '/duplicates', icon: <IconDuplicateDetection /> },
     { name: 'Workflow', path: '/workflow', icon: <IconWorkflow /> },
-    { name: 'Analytics', path: '/analytics', icon: <IconAnalytics /> },
-  ];
+    { name: 'Analytics', path: '/analytics', icon: <IconAnalytics /> }
+  );
 
   const match = location.pathname.match(/^\/applications\/([a-zA-Z0-9-]+)(\/edit)?$/);
   const currentAppId = (match && match[1] && match[1] !== 'new') ? match[1] : null;

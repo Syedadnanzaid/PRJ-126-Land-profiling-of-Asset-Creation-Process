@@ -8,6 +8,7 @@ import Login from './components/pages/Login';
 import Register from './components/pages/Register';
 import ApplicationDashboard from './components/pages/ApplicationDashboard';
 import ApplicationDetails from './components/pages/ApplicationDetails';
+import VerificationQueue from './components/pages/VerificationQueue';
 import AssetRegistry from './components/pages/AssetRegistry';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { RoleProtectedRoute, Role } from './components/auth/RoleProtectedRoute';
@@ -37,6 +38,14 @@ function App() {
                 element={
                   <RoleProtectedRoute allowedRoles={[Role.APPLICANT]}>
                     <ApplicationDashboard />
+                  </RoleProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/verification-queue" 
+                element={
+                  <RoleProtectedRoute allowedRoles={[Role.VERIFICATION_OFFICER, Role.ADMIN]}>
+                    <VerificationQueue />
                   </RoleProtectedRoute>
                 } 
               />
