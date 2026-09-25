@@ -36,19 +36,31 @@ const Sidebar = () => {
     navigate('/login');
   };
 
-  let navItems: { name: string; path?: string; icon: ReactNode; action?: () => void }[] = [
-    { name: 'Dashboard', path: '/dashboard', icon: <IconDashboard /> },
-  ];
+  let navItems: { name: string; path?: string; icon: ReactNode; action?: () => void }[] = [];
+
+  if (userRole === Role.ADMIN) {
+    navItems.push({ name: 'Dashboard', path: '/dashboard', icon: <IconDashboard /> });
+  }
 
   if (userRole === Role.VERIFICATION_OFFICER || userRole === Role.ADMIN) {
     navItems.push({ name: 'Verification Queue', path: '/verification-queue', icon: <IconList /> });
   }
 
+  if (userRole === Role.APPROVING_AUTHORITY || userRole === Role.ADMIN) {
+    navItems.push({ name: 'Approval Queue', path: '/approval-queue', icon: <IconList /> });
+  }
+
   navItems.push(
     { name: 'Land Assets', path: '/assets', icon: <IconLandAssets /> },
     { name: 'GIS Map', path: '/gis', icon: <IconGisMap /> },
-    { name: 'Documents', path: '/documents', icon: <IconDocuments /> },
-    { name: 'Duplicate Detection', path: '/duplicates', icon: <IconDuplicateDetection /> },
+    { name: 'Documents', path: '/documents', icon: <IconDocuments /> }
+  );
+
+  if (userRole !== Role.APPROVING_AUTHORITY) {
+    navItems.push({ name: 'Duplicate Detection', path: '/duplicates', icon: <IconDuplicateDetection /> });
+  }
+
+  navItems.push(
     { name: 'Workflow', path: '/workflow', icon: <IconWorkflow /> },
     { name: 'Analytics', path: '/analytics', icon: <IconAnalytics /> }
   );

@@ -76,6 +76,34 @@ export const getVerificationQueueApplications = async () => {
   });
 };
 
+export const getApprovalQueueApplications = async () => {
+  return prisma.landApplication.findMany({
+    where: {
+      status: ApplicationStatus.PENDING_APPROVAL
+    },
+    orderBy: { updated_at: 'desc' },
+    select: {
+      application_id: true,
+      survey_no: true,
+      owner_name: true,
+      area: true,
+      latitude: true,
+      longitude: true,
+      asset_type: true,
+      description: true,
+      status: true,
+      created_at: true,
+      updated_at: true,
+      applicant: {
+        select: {
+          name: true,
+          email: true
+        }
+      }
+    }
+  });
+};
+
 export const getAllApplications = async () => {
   return prisma.landApplication.findMany({
     orderBy: { updated_at: 'desc' },

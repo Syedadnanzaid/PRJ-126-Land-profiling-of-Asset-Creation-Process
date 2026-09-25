@@ -81,6 +81,8 @@ export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRout
       return <Navigate to="/applications" replace />;
     } else if (userRole === Role.VERIFICATION_OFFICER) {
       return <Navigate to="/verification-queue" replace />;
+    } else if (userRole === Role.APPROVING_AUTHORITY) {
+      return <Navigate to="/approval-queue" replace />;
     }
     return <Navigate to="/dashboard" replace />;
   }

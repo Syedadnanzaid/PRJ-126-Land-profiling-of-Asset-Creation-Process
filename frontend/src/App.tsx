@@ -11,6 +11,7 @@ import GovAuthSuccess from './components/pages/GovAuthSuccess';
 import ApplicationDashboard from './components/pages/ApplicationDashboard';
 import ApplicationDetails from './components/pages/ApplicationDetails';
 import VerificationQueue from './components/pages/VerificationQueue';
+import ApprovalQueue from './components/pages/ApprovalQueue';
 import AssetRegistry from './components/pages/AssetRegistry';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { RoleProtectedRoute, Role } from './components/auth/RoleProtectedRoute';
@@ -50,6 +51,14 @@ function App() {
                 element={
                   <RoleProtectedRoute allowedRoles={[Role.VERIFICATION_OFFICER, Role.ADMIN]}>
                     <VerificationQueue />
+                  </RoleProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/approval-queue" 
+                element={
+                  <RoleProtectedRoute allowedRoles={[Role.APPROVING_AUTHORITY, Role.ADMIN]}>
+                    <ApprovalQueue />
                   </RoleProtectedRoute>
                 } 
               />

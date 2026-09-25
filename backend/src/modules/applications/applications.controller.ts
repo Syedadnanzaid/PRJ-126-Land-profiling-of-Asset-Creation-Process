@@ -42,6 +42,9 @@ export const getApplications = async (req: Request, res: Response, next: NextFun
     } else if (req.user.role === 'VERIFICATION_OFFICER') {
       // VERIFICATION_OFFICER: return verification queue
       applications = await applicationsService.getVerificationQueueApplications();
+    } else if (req.user.role === 'APPROVING_AUTHORITY') {
+      // APPROVING_AUTHORITY: return approval queue
+      applications = await applicationsService.getApprovalQueueApplications();
     } else if (req.user.role === 'ADMIN') {
       // ADMIN: return all
       applications = await applicationsService.getAllApplications();

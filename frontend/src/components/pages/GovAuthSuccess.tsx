@@ -54,7 +54,7 @@ const GovAuthSuccess = () => {
         navigate('/verification-queue');
         break;
       case 'APPROVING_AUTHORITY':
-        navigate('/dashboard');
+        navigate('/approval-queue');
         break;
       case 'ADMIN':
         navigate('/dashboard');
