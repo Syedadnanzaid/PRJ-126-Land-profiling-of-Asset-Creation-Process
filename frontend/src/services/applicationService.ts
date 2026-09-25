@@ -92,6 +92,19 @@ export async function getApplications(): Promise<ApplicationsListResponse | null
   return apiRequest<ApplicationsListResponse>('/applications');
 }
 
+export interface ApprovalStatsResponse {
+  status: string;
+  data: {
+    pendingApproval: number;
+    approved: number;
+    rejected: number;
+  };
+}
+
+export async function getApprovalStats(): Promise<ApprovalStatsResponse | null> {
+  return apiRequest<ApprovalStatsResponse>('/applications/approval-stats');
+}
+
 export async function getApplicationById(applicationId: string): Promise<ApplicationResponse | null> {
   return apiRequest<ApplicationResponse>(`/applications/${applicationId}`);
 }

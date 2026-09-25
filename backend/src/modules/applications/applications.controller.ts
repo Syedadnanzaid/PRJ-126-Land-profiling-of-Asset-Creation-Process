@@ -58,6 +58,22 @@ export const getApplications = async (req: Request, res: Response, next: NextFun
   }
 };
 
+export const getApprovalStats = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user || !req.user.user_id || !req.user.role) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+    if (req.user.role !== 'APPROVING_AUTHORITY' && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ status: 'error', message: 'Forbidden' });
+    }
+
+    const stats = await applicationsService.getApprovalStats();
+    res.status(200).json({ status: 'success', data: stats });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getApplicationById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { applicationId } = req.params;

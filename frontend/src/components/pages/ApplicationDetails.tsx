@@ -249,6 +249,7 @@ const ApplicationDetails = () => {
   ];
 
   const workflowStages = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'VERIFIED', 'PENDING_APPROVAL', 'APPROVED'];
+  const decisionEvent = application.workflow?.find((e: any) => e.new_status === 'APPROVED' || e.new_status === 'REJECTED');
   const currentStageIndex = workflowStages.indexOf(application.status) !== -1 
     ? workflowStages.indexOf(application.status) 
     : (application.status === 'CORRECTION_REQUIRED' ? 2 : 0);
@@ -439,18 +440,36 @@ const ApplicationDetails = () => {
               </div>
             )}
             
-            {/* Rejected State Warning */}
-            {application.status === 'REJECTED' && (
-              <div className="ad-info-card" style={{ borderLeft: '4px solid #EF4444' }}>
+            {/* Final Decision Warning */}
+            {(application.status === 'APPROVED' || application.status === 'REJECTED') && (
+              <div className="ad-info-card" style={{ borderLeft: `4px solid ${application.status === 'APPROVED' ? '#0F9D58' : '#EF4444'}` }}>
                 <div className="ad-card-header">
-                  <div className="ad-card-icon" style={{ backgroundColor: '#FEE2E2', color: '#EF4444' }}>
-                    <IconXCircle width={24} height={24} />
+                  <div className="ad-card-icon" style={{ backgroundColor: application.status === 'APPROVED' ? '#ECFDF5' : '#FEE2E2', color: application.status === 'APPROVED' ? '#0F9D58' : '#EF4444' }}>
+                    {application.status === 'APPROVED' ? <IconCheckCircle width={24} height={24} /> : <IconXCircle width={24} height={24} />}
                   </div>
                   <div className="ad-card-title-group">
-                    <h3>Application Rejected</h3>
-                    <p>This land application has been rejected.</p>
+                    <h3>Decision: {application.status}</h3>
+                    <p>This land application has been {application.status.toLowerCase()}.</p>
                   </div>
                 </div>
+                {decisionEvent && (
+                  <div className="ad-card-body">
+                    <div className="ad-info-list two-column">
+                      <div className="ad-info-row">
+                        <span className="label">Decision by</span>
+                        <span className="value">{decisionEvent.user?.name || decisionEvent.action_by || 'Unknown'}</span>
+                      </div>
+                      <div className="ad-info-row">
+                        <span className="label">Decision date</span>
+                        <span className="value">{new Date(decisionEvent.action_time).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div className="ad-info-row full-width" style={{ marginTop: '16px', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <span className="label">{application.status === 'APPROVED' ? 'Remarks' : 'Reason'}</span>
+                      <p className="description-value" style={{ fontStyle: 'italic' }}>{decisionEvent.remarks || 'No remarks provided.'}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

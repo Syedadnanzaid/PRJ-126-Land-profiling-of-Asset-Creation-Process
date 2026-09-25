@@ -140,7 +140,12 @@ export const getApplicationById = async (applicationId: string) => {
         orderBy: { uploaded_at: 'desc' }
       },
       workflow: {
-        orderBy: { action_time: 'desc' }
+        orderBy: { action_time: 'desc' },
+        include: {
+          user: {
+            select: { name: true, role: true }
+          }
+        }
       }
     }
   });
@@ -154,4 +159,22 @@ export const updateApplication = async (applicationId: string, data: Partial<Pri
     where: { application_id: applicationId },
     data: safeData
   });
+};
+
+export const getApprovalStats = async () => {
+  const pendingApproval = await prisma.landApplication.count({
+    where: { status: ApplicationStatus.PENDING_APPROVAL }
+  });
+  
+  const approved = await prisma.landAsset.count(); // Matches analytics service logic
+
+  const rejected = await prisma.landApplication.count({
+    where: { status: ApplicationStatus.REJECTED }
+  });
+
+  return {
+    pendingApproval,
+    approved,
+    rejected
+  };
 };

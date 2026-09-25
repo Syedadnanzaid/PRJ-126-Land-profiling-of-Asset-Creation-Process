@@ -11,6 +11,9 @@ router.post('/', authorize('APPLICANT'), applicationsController.createApplicatio
 router.get('/', authorize('APPLICANT', 'VERIFICATION_OFFICER', 'APPROVING_AUTHORITY', 'ADMIN'), applicationsController.getApplications);
 router.patch('/:applicationId', authorize('APPLICANT'), applicationsController.updateApplication);
 
+// Approval Statistics
+router.get('/approval-stats', authorize('APPROVING_AUTHORITY', 'ADMIN'), applicationsController.getApprovalStats);
+
 // Authorized view (roles check inside controller logic for APPLICANT)
 router.get('/:applicationId', authorize('APPLICANT', 'VERIFICATION_OFFICER', 'APPROVING_AUTHORITY', 'ADMIN'), applicationsController.getApplicationById);
 

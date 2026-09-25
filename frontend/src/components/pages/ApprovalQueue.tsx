@@ -7,25 +7,34 @@ import {
 import './Dashboard.css';
 import './LandAssets.css';
 import { useNavigate } from 'react-router-dom';
-import { getApplications } from '../../services/applicationService';
+import { getApplications, getApprovalStats } from '../../services/applicationService';
 import type { LandApplication, ApplicationStatus } from '../../services/applicationService';
 
 const ApprovalQueue = () => {
   const navigate = useNavigate();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [applications, setApplications] = useState<LandApplication[]>([]);
+  const [stats, setStats] = useState({ pendingApproval: 0, approved: 0, rejected: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchApplications = async () => {
+  const fetchData = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getApplications();
-      if (response && response.data) {
-        setApplications(response.data);
+      const [appRes, statsRes] = await Promise.all([
+        getApplications(),
+        getApprovalStats().catch(() => null)
+      ]);
+      
+      if (appRes && appRes.data) {
+        setApplications(appRes.data);
       } else {
-        throw new Error('Invalid response');
+        throw new Error('Invalid applications response');
+      }
+      
+      if (statsRes && statsRes.data) {
+        setStats(statsRes.data);
       }
     } catch (err) {
       setError("Unable to load approval queue. Please try again.");
@@ -35,14 +44,8 @@ const ApprovalQueue = () => {
   };
 
   useEffect(() => {
-    fetchApplications();
+    fetchData();
   }, []);
-
-  const totalApplications = applications.length;
-  // Approval Queue typically only has PENDING_APPROVAL. Let's just show stats for that.
-  const pendingApproval = applications.filter(a => a.status === 'PENDING_APPROVAL').length;
-  const approved = applications.filter(a => a.status === 'APPROVED').length;
-  const rejected = applications.filter(a => a.status === 'REJECTED').length;
 
   const formatStatus = (status: ApplicationStatus) => {
     switch(status) {
@@ -95,28 +98,28 @@ const ApprovalQueue = () => {
             <h3>Total Pending Approval</h3>
             <span className="stat-icon"><IconLayers /></span>
           </div>
-          <p className="stat-value">{totalApplications}</p>
+          <p className="stat-value">{stats.pendingApproval}</p>
         </div>
         <div className="stat-card">
           <div className="stat-card-header">
             <h3>Pending</h3>
             <span className="stat-icon"><IconClock /></span>
           </div>
-          <p className="stat-value">{pendingApproval}</p>
+          <p className="stat-value">{stats.pendingApproval}</p>
         </div>
         <div className="stat-card">
           <div className="stat-card-header">
-            <h3>Approved (Session)</h3>
+            <h3>Approved</h3>
             <span className="stat-icon"><IconCheckCircle /></span>
           </div>
-          <p className="stat-value">{approved}</p>
+          <p className="stat-value">{stats.approved}</p>
         </div>
         <div className="stat-card">
           <div className="stat-card-header">
-            <h3>Rejected (Session)</h3>
+            <h3>Rejected</h3>
             <span className="stat-icon"><IconAlertTriangle /></span>
           </div>
-          <p className="stat-value">{rejected}</p>
+          <p className="stat-value">{stats.rejected}</p>
         </div>
       </section>
 
@@ -248,8 +251,7 @@ const ApprovalQueue = () => {
 
             {!isLoading && error && (
               <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                <p style={{ marginBottom: '16px' }}>{error}</p>
-                <button className="btn-secondary" onClick={fetchApplications} style={{ cursor: 'pointer' }}>
+                <button className="btn-secondary" onClick={fetchData} style={{ cursor: 'pointer' }}>
                   <IconRotateCcw width={16} height={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Retry
                 </button>
               </div>
