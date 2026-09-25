@@ -13,8 +13,18 @@ const AssetRegistry = () => {
   const navigate = useNavigate();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [assets, setAssets] = useState<LandAsset[]>([]);
+  const [filteredAssets, setFilteredAssets] = useState<LandAsset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Search and Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [assetTypeFilter, setAssetTypeFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+
+  // Pagination State
+  const [entriesPerPage, setEntriesPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchAssets = async () => {
     setIsLoading(true);
@@ -23,6 +33,7 @@ const AssetRegistry = () => {
       const response = await getAssets();
       if (response && response.data) {
         setAssets(response.data);
+        setFilteredAssets(response.data);
       } else {
         throw new Error('Invalid response');
       }
@@ -37,7 +48,82 @@ const AssetRegistry = () => {
     fetchAssets();
   }, []);
 
-  const totalAssets = assets.length;
+  useEffect(() => {
+    let result = assets;
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(a => 
+        a.asset_id.toLowerCase().includes(q) ||
+        (a.survey_no && a.survey_no.toLowerCase().includes(q)) ||
+        (a.owner_name && a.owner_name.toLowerCase().includes(q)) ||
+        (a.land_id && a.land_id.toLowerCase().includes(q))
+      );
+    }
+
+    if (assetTypeFilter) {
+      result = result.filter(a => a.asset_type?.toLowerCase() === assetTypeFilter.toLowerCase());
+    }
+
+    if (dateFilter) {
+      result = result.filter(a => new Date(a.created_at).toISOString().startsWith(dateFilter));
+    }
+
+    setFilteredAssets(result);
+    setCurrentPage(1); // Reset to first page on filter change
+  }, [searchQuery, assetTypeFilter, dateFilter, assets]);
+
+  const handleExport = () => {
+    if (filteredAssets.length === 0) return;
+    
+    const headers = ['Asset ID', 'Survey No.', 'Owner / Entity', 'Latitude', 'Longitude', 'Type', 'Area (Acres)', 'Registered Date'];
+    const csvRows = [headers.join(',')];
+
+    for (const asset of filteredAssets) {
+      const row = [
+        asset.asset_id,
+        asset.survey_no || 'N/A',
+        `"${(asset.owner_name || 'N/A').replace(/"/g, '""')}"`,
+        asset.latitude || '',
+        asset.longitude || '',
+        asset.asset_type || 'N/A',
+        asset.area || '',
+        new Date(asset.created_at).toLocaleDateString()
+      ];
+      csvRows.push(row.join(','));
+    }
+
+    const csvData = csvRows.join('\n');
+    const blob = new Blob([csvData], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden', '');
+    a.setAttribute('href', url);
+    a.setAttribute('download', 'official-land-assets.csv');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setAssetTypeFilter('');
+    setDateFilter('');
+  };
+
+  // Pagination logic
+  const indexOfLastEntry = currentPage * entriesPerPage;
+  const indexOfFirstEntry = indexOfLastEntry - entriesPerPage;
+  const currentEntries = filteredAssets.slice(indexOfFirstEntry, indexOfLastEntry);
+  const totalPages = Math.ceil(filteredAssets.length / entriesPerPage);
+
+  const paginate = (pageNumber: number) => {
+    if (pageNumber > 0 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
+
+  const totalAssets = filteredAssets.length;
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
@@ -102,38 +188,40 @@ const AssetRegistry = () => {
               <label>Keyword Search</label>
               <div className="input-with-icon">
                 <IconSearch width={16} height={16} />
-                <input type="text" placeholder="Asset ID, Survey No., Owner..." />
+                <input 
+                  type="text" 
+                  placeholder="Asset ID, Survey No., Owner..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
             </div>
             <div className="input-group">
               <label>Asset Type</label>
-              <select>
+              <select value={assetTypeFilter} onChange={(e) => setAssetTypeFilter(e.target.value)}>
                 <option value="">All Types</option>
                 <option value="agricultural">Agricultural</option>
                 <option value="residential">Residential</option>
                 <option value="commercial">Commercial</option>
+                <option value="industrial">Industrial</option>
               </select>
             </div>
             <div className="input-group">
-              <label>Location</label>
-              <select>
-                <option value="">All Locations</option>
-              </select>
-            </div>
-            <div className="input-group">
-              <label>Date Range</label>
+              <label>Date Range (Start)</label>
               <div className="input-with-icon">
                 <IconCalendar width={16} height={16} />
-                <input type="text" placeholder="Select date range" style={{ paddingLeft: '36px' }} onFocus={(e) => e.target.type = 'date'} onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }} />
+                <input 
+                  type="date" 
+                  style={{ paddingLeft: '36px' }}
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                />
               </div>
             </div>
             
             <div className="filter-actions">
-              <button className="btn-secondary">
+              <button className="btn-secondary" onClick={handleResetFilters}>
                 <IconRotateCcw width={16} height={16} /> Reset
-              </button>
-              <button className="btn-primary">
-                <IconSearch width={16} height={16} /> Search
               </button>
             </div>
           </div>
@@ -157,14 +245,13 @@ const AssetRegistry = () => {
             <h3>Official Assets</h3>
           </div>
           <div className="toolbar-right">
-            <span className="toolbar-count">Showing {assets.length > 0 ? 1 : 0}–{assets.length} of {assets.length} assets</span>
+            <span className="toolbar-count">Showing {currentEntries.length > 0 ? indexOfFirstEntry + 1 : 0}–{indexOfFirstEntry + currentEntries.length} of {filteredAssets.length} assets</span>
             <div className="toolbar-view-toggle">
               <span className="view-label">View:</span>
               <button className="btn-view active"><IconList width={16} height={16} /></button>
-              <button className="btn-view"><IconGrid width={16} height={16} /></button>
             </div>
-            <button className="btn-export">
-              <IconDownload width={16} height={16} /> Export <IconChevronDown width={14} height={14} />
+            <button className="btn-export" onClick={handleExport} disabled={filteredAssets.length === 0}>
+              <IconDownload width={16} height={16} /> Export
             </button>
           </div>
         </div>
@@ -185,9 +272,9 @@ const AssetRegistry = () => {
                   <th style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
-              {!isLoading && !error && assets.length > 0 && (
+              {!isLoading && !error && currentEntries.length > 0 && (
                 <tbody>
-                  {assets.map((asset) => (
+                  {currentEntries.map((asset) => (
                     <tr key={asset.asset_id}>
                       <td>{asset.asset_id}</td>
                       <td>{asset.survey_no || 'N/A'}</td>
@@ -225,7 +312,7 @@ const AssetRegistry = () => {
               </div>
             )}
 
-            {!isLoading && !error && assets.length === 0 && (
+            {!isLoading && !error && filteredAssets.length === 0 && (
               <div className="empty-state" style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
@@ -254,21 +341,36 @@ const AssetRegistry = () => {
         <div className="pagination-footer">
           <div className="pagination-left">
             <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-              Showing {assets.length > 0 ? 1 : 0}–{assets.length} of {assets.length} assets
+              Showing {currentEntries.length > 0 ? indexOfFirstEntry + 1 : 0}–{indexOfFirstEntry + currentEntries.length} of {filteredAssets.length} assets
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Show</span>
-              <select className="entries-select" disabled>
+              <select className="entries-select" value={entriesPerPage} onChange={(e) => { setEntriesPerPage(Number(e.target.value)); setCurrentPage(1); }}>
+                <option value="5">5</option>
                 <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
               </select>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>entries</span>
             </div>
           </div>
           <div className="pagination-right">
             <div className="pagination-controls">
-              <button className="btn-page" disabled>Previous</button>
-              <button className="btn-page active" disabled>1</button>
-              <button className="btn-page" disabled>Next</button>
+              <button 
+                className="btn-page" 
+                disabled={currentPage === 1 || totalPages === 0}
+                onClick={() => paginate(currentPage - 1)}
+              >
+                Previous
+              </button>
+              <button className="btn-page active">{totalPages > 0 ? currentPage : 0}</button>
+              <button 
+                className="btn-page" 
+                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => paginate(currentPage + 1)}
+              >
+                Next
+              </button>
             </div>
           </div>
         </div>

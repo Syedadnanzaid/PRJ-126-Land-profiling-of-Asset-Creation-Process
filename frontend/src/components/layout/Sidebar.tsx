@@ -95,8 +95,6 @@ const Sidebar = () => {
     } else {
       navItems.push({ name: 'Application Details', action: handleApplicationDetailsClick, icon: <IconFile /> });
     }
-    
-    navItems.push({ name: 'Official Assets', path: '/assets', icon: <IconLandAssets /> });
   }
 
   return (

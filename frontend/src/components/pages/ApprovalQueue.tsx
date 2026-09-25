@@ -14,7 +14,20 @@ const ApprovalQueue = () => {
   const navigate = useNavigate();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [applications, setApplications] = useState<LandApplication[]>([]);
+  const [filteredApplications, setFilteredApplications] = useState<LandApplication[]>([]);
   const [stats, setStats] = useState({ pendingApproval: 0, approved: 0, rejected: 0 });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Search and Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [assetTypeFilter, setAssetTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+
+  // Pagination State
+  const [entriesPerPage, setEntriesPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +42,7 @@ const ApprovalQueue = () => {
       
       if (appRes && appRes.data) {
         setApplications(appRes.data);
+        setFilteredApplications(appRes.data);
       } else {
         throw new Error('Invalid applications response');
       }
@@ -46,6 +60,87 @@ const ApprovalQueue = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    let result = applications;
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(a => 
+        a.application_id.toLowerCase().includes(q) ||
+        (a.survey_no && a.survey_no.toLowerCase().includes(q)) ||
+        (a.owner_name && a.owner_name.toLowerCase().includes(q)) ||
+        (a.land_id && a.land_id.toLowerCase().includes(q))
+      );
+    }
+
+    if (assetTypeFilter) {
+      result = result.filter(a => a.asset_type?.toLowerCase() === assetTypeFilter.toLowerCase());
+    }
+
+    if (statusFilter) {
+      result = result.filter(a => a.status === statusFilter);
+    }
+
+    if (dateFilter) {
+      result = result.filter(a => new Date(a.created_at).toISOString().startsWith(dateFilter) || new Date(a.updated_at).toISOString().startsWith(dateFilter));
+    }
+
+    setFilteredApplications(result);
+    setCurrentPage(1);
+  }, [searchQuery, assetTypeFilter, statusFilter, dateFilter, applications]);
+
+  const handleExport = () => {
+    if (filteredApplications.length === 0) return;
+    
+    const headers = ['App ID', 'Survey No.', 'Owner / Entity', 'Latitude', 'Longitude', 'Type', 'Area (Acres)', 'Status', 'Updated Date'];
+    const csvRows = [headers.join(',')];
+
+    for (const app of filteredApplications) {
+      const row = [
+        app.application_id,
+        app.survey_no || 'N/A',
+        `"${(app.owner_name || 'N/A').replace(/"/g, '""')}"`,
+        app.latitude || '',
+        app.longitude || '',
+        app.asset_type || 'N/A',
+        app.area || '',
+        app.status,
+        new Date(app.updated_at || app.created_at).toLocaleDateString()
+      ];
+      csvRows.push(row.join(','));
+    }
+
+    const csvData = csvRows.join('\n');
+    const blob = new Blob([csvData], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden', '');
+    a.setAttribute('href', url);
+    a.setAttribute('download', 'approval-queue.csv');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setAssetTypeFilter('');
+    setStatusFilter('');
+    setDateFilter('');
+  };
+
+  // Pagination logic
+  const indexOfLastEntry = currentPage * entriesPerPage;
+  const indexOfFirstEntry = indexOfLastEntry - entriesPerPage;
+  const currentEntries = filteredApplications.slice(indexOfFirstEntry, indexOfLastEntry);
+  const totalPages = Math.ceil(filteredApplications.length / entriesPerPage);
+
+  const paginate = (pageNumber: number) => {
+    if (pageNumber > 0 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
 
   const formatStatus = (status: ApplicationStatus) => {
     switch(status) {
@@ -142,39 +237,47 @@ const ApprovalQueue = () => {
               <label>Keyword Search</label>
               <div className="input-with-icon">
                 <IconSearch width={16} height={16} />
-                <input type="text" placeholder="App ID, Survey No., Owner..." />
+                <input 
+                  type="text" 
+                  placeholder="App ID, Survey No., Owner..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
             </div>
             <div className="input-group">
               <label>Asset Type</label>
-              <select>
+              <select value={assetTypeFilter} onChange={(e) => setAssetTypeFilter(e.target.value)}>
                 <option value="">All Types</option>
                 <option value="agricultural">Agricultural</option>
                 <option value="residential">Residential</option>
                 <option value="commercial">Commercial</option>
+                <option value="industrial">Industrial</option>
               </select>
             </div>
             <div className="input-group">
               <label>Status</label>
-              <select>
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                 <option value="">All Status</option>
                 <option value="PENDING_APPROVAL">Pending Approval</option>
               </select>
             </div>
             <div className="input-group">
-              <label>Date Range</label>
+              <label>Date Range (Start)</label>
               <div className="input-with-icon">
                 <IconCalendar width={16} height={16} />
-                <input type="text" placeholder="Select date range" style={{ paddingLeft: '36px' }} onFocus={(e) => e.target.type = 'date'} onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }} />
+                <input 
+                  type="date" 
+                  style={{ paddingLeft: '36px' }}
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                />
               </div>
             </div>
             
             <div className="filter-actions">
-              <button className="btn-secondary">
+              <button className="btn-secondary" onClick={handleResetFilters}>
                 <IconRotateCcw width={16} height={16} /> Reset
-              </button>
-              <button className="btn-primary">
-                <IconSearch width={16} height={16} /> Search
               </button>
             </div>
           </div>
@@ -187,14 +290,13 @@ const ApprovalQueue = () => {
             <h3>Pending Applications</h3>
           </div>
           <div className="toolbar-right">
-            <span className="toolbar-count">Showing {applications.length > 0 ? 1 : 0}–{applications.length} of {applications.length} cases</span>
+            <span className="toolbar-count">Showing {currentEntries.length > 0 ? indexOfFirstEntry + 1 : 0}–{indexOfFirstEntry + currentEntries.length} of {filteredApplications.length} cases</span>
             <div className="toolbar-view-toggle">
               <span className="view-label">View:</span>
               <button className="btn-view active"><IconList width={16} height={16} /></button>
-              <button className="btn-view"><IconGrid width={16} height={16} /></button>
             </div>
-            <button className="btn-export">
-              <IconDownload width={16} height={16} /> Export <IconChevronDown width={14} height={14} />
+            <button className="btn-export" onClick={handleExport} disabled={filteredApplications.length === 0}>
+              <IconDownload width={16} height={16} /> Export
             </button>
           </div>
         </div>
@@ -216,9 +318,9 @@ const ApprovalQueue = () => {
                   <th style={{ textAlign: 'center' }}>Action</th>
                 </tr>
               </thead>
-              {!isLoading && !error && applications.length > 0 && (
+              {!isLoading && !error && currentEntries.length > 0 && (
                 <tbody>
-                  {applications.map((app) => (
+                  {currentEntries.map((app) => (
                     <tr key={app.application_id}>
                       <td>{app.application_id}</td>
                       <td>{app.survey_no || 'N/A'}</td>
@@ -257,7 +359,7 @@ const ApprovalQueue = () => {
               </div>
             )}
 
-            {!isLoading && !error && applications.length === 0 && (
+            {!isLoading && !error && filteredApplications.length === 0 && (
               <div className="empty-state" style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
@@ -279,6 +381,44 @@ const ApprovalQueue = () => {
                 <p style={{ margin: '0 0 24px 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>There are no applications pending approval at this time.</p>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Pagination Footer */}
+        <div className="pagination-footer">
+          <div className="pagination-left">
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+              Showing {currentEntries.length > 0 ? indexOfFirstEntry + 1 : 0}–{indexOfFirstEntry + currentEntries.length} of {filteredApplications.length} cases
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Show</span>
+              <select className="entries-select" value={entriesPerPage} onChange={(e) => { setEntriesPerPage(Number(e.target.value)); setCurrentPage(1); }}>
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+              </select>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>entries</span>
+            </div>
+          </div>
+          <div className="pagination-right">
+            <div className="pagination-controls">
+              <button 
+                className="btn-page" 
+                disabled={currentPage === 1 || totalPages === 0}
+                onClick={() => paginate(currentPage - 1)}
+              >
+                Previous
+              </button>
+              <button className="btn-page active">{totalPages > 0 ? currentPage : 0}</button>
+              <button 
+                className="btn-page" 
+                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => paginate(currentPage + 1)}
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       </section>

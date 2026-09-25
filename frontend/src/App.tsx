@@ -88,11 +88,19 @@ function App() {
               />
               <Route 
                 path="/assets" 
-                element={<AssetRegistry />} 
+                element={
+                  <RoleProtectedRoute allowedRoles={[Role.VERIFICATION_OFFICER, Role.APPROVING_AUTHORITY, Role.ADMIN]}>
+                    <AssetRegistry />
+                  </RoleProtectedRoute>
+                } 
               />
               <Route 
                 path="/assets/:assetId" 
-                element={<AssetDetails />} 
+                element={
+                  <RoleProtectedRoute allowedRoles={[Role.VERIFICATION_OFFICER, Role.APPROVING_AUTHORITY, Role.ADMIN]}>
+                    <AssetDetails />
+                  </RoleProtectedRoute>
+                } 
               />
               <Route 
                 path="/gis" 
