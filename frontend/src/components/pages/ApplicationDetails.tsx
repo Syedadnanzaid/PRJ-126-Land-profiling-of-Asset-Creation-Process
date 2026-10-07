@@ -457,7 +457,7 @@ const ApplicationDetails = () => {
                     <div className="ad-info-list two-column">
                       <div className="ad-info-row">
                         <span className="label">Decision by</span>
-                        <span className="value">{decisionEvent.user?.name || decisionEvent.action_by || 'Unknown'}</span>
+                        <span className="value">{(decisionEvent as any).user?.name || decisionEvent.action_by || 'Unknown'}</span>
                       </div>
                       <div className="ad-info-row">
                         <span className="label">Decision date</span>

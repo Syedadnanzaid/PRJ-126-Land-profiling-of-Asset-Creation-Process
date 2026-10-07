@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { 
   IconLayers, IconClock, IconAlertTriangle, IconCheckCircle,
-  IconSearch, IconFilter, IconChevronDown, IconRotateCcw,
-  IconList, IconGrid, IconDownload, IconCalendar, IconChevronUp
+  IconRotateCcw, IconChevronDown,
+  IconList, IconGrid, IconDownload
 } from '../icons/Icons';
 import './Dashboard.css';
 import './LandAssets.css';
@@ -12,7 +12,6 @@ import type { LandAsset, AssetStatus } from '../../services/assetService';
 
 const LandAssets = () => {
   const navigate = useNavigate();
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [assets, setAssets] = useState<LandAsset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -125,93 +124,6 @@ const LandAssets = () => {
       {/* 3. Main Data Section */}
       <section className="dashboard-widget" style={{ padding: 0, backgroundColor: 'transparent', border: 'none', boxShadow: 'none' }}>
         
-        {/* Search & Filter section */}
-        <div className="search-filter-section">
-          <div className="search-filter-header">
-            <div className="search-filter-title">
-              <IconFilter width={20} height={20} /> Search & Filter Assets
-            </div>
-            <button className="btn-advanced-filters" onClick={() => setShowAdvanced(!showAdvanced)}>
-              Advanced Filters {showAdvanced ? <IconChevronUp width={16} height={16} /> : <IconChevronDown width={16} height={16} />}
-            </button>
-          </div>
-
-          <div className="search-filter-controls">
-            <div className="input-group" style={{ flex: 2 }}>
-              <label>Keyword Search</label>
-              <div className="input-with-icon">
-                <IconSearch width={16} height={16} />
-                <input type="text" placeholder="Asset ID, Survey No., Owner..." />
-              </div>
-            </div>
-            <div className="input-group">
-              <label>Asset Type</label>
-              <select>
-                <option value="">All Types</option>
-                <option value="agricultural">Agricultural</option>
-                <option value="residential">Residential</option>
-                <option value="commercial">Commercial</option>
-              </select>
-            </div>
-            <div className="input-group">
-              <label>Location</label>
-              <select>
-                <option value="">All Locations</option>
-              </select>
-            </div>
-            <div className="input-group">
-              <label>Status</label>
-              <select>
-                <option value="">All Status</option>
-                <option value="DRAFT">Draft</option>
-                <option value="SUBMITTED">Submitted</option>
-                <option value="UNDER_REVIEW">Under Review</option>
-                <option value="APPROVED">Approved</option>
-                <option value="REJECTED">Rejected</option>
-              </select>
-            </div>
-            <div className="input-group">
-              <label>Date Range</label>
-              <div className="input-with-icon">
-                <IconCalendar width={16} height={16} />
-                <input type="text" placeholder="Select date range" style={{ paddingLeft: '36px' }} onFocus={(e) => e.target.type = 'date'} onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }} />
-              </div>
-            </div>
-            
-            <div className="filter-actions">
-              <button className="btn-secondary">
-                <IconRotateCcw width={16} height={16} /> Reset
-              </button>
-              <button className="btn-primary">
-                <IconSearch width={16} height={16} /> Search
-              </button>
-            </div>
-          </div>
-
-          {showAdvanced && (
-            <div className="advanced-filters-area">
-              <div className="search-filter-controls">
-                <div className="input-group">
-                  <label>Area Range (Acres)</label>
-                  <select><option value="">Any Size</option></select>
-                </div>
-                <div className="input-group">
-                  <label>Created By</label>
-                  <select><option value="">Any User</option></select>
-                </div>
-                <div className="input-group">
-                  <label>AI Verification</label>
-                  <select><option value="">Any Result</option></select>
-                </div>
-                <div className="input-group">
-                  <label>Document Status</label>
-                  <select><option value="">Any Status</option></select>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* All Land Assets Toolbar */}
         <div className="assets-toolbar">
           <div className="toolbar-left">

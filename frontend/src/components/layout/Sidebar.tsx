@@ -51,19 +51,18 @@ const Sidebar = () => {
   }
 
   navItems.push(
-    { name: 'Land Assets', path: '/assets', icon: <IconLandAssets /> },
-    { name: 'GIS Map', path: '/gis', icon: <IconGisMap /> },
-    { name: 'Documents', path: '/documents', icon: <IconDocuments /> }
+    { name: 'Land Assets', path: '/assets', icon: <IconLandAssets /> }
   );
 
-  if (userRole !== Role.APPROVING_AUTHORITY) {
-    navItems.push({ name: 'Duplicate Detection', path: '/duplicates', icon: <IconDuplicateDetection /> });
+  if (userRole === Role.ADMIN) {
+    navItems.push(
+      { name: 'GIS Map', path: '/gis', icon: <IconGisMap /> },
+      { name: 'Documents', path: '/documents', icon: <IconDocuments /> },
+      { name: 'Duplicate Detection', path: '/duplicates', icon: <IconDuplicateDetection /> },
+      { name: 'Workflow', path: '/workflow', icon: <IconWorkflow /> },
+      { name: 'Analytics', path: '/analytics', icon: <IconAnalytics /> }
+    );
   }
-
-  navItems.push(
-    { name: 'Workflow', path: '/workflow', icon: <IconWorkflow /> },
-    { name: 'Analytics', path: '/analytics', icon: <IconAnalytics /> }
-  );
 
   const match = location.pathname.match(/^\/applications\/([a-zA-Z0-9-]+)(\/edit)?$/);
   const currentAppId = (match && match[1] && match[1] !== 'new') ? match[1] : null;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
-  IconLayers, IconSearch, IconFilter, IconChevronDown, IconRotateCcw,
-  IconList, IconGrid, IconDownload, IconCalendar, IconChevronUp
+  IconLayers, IconRotateCcw,
+  IconList, IconDownload
 } from '../icons/Icons';
 import './Dashboard.css';
 import './LandAssets.css';
@@ -11,16 +11,9 @@ import type { LandAsset } from '../../services/assetService';
 
 const AssetRegistry = () => {
   const navigate = useNavigate();
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [assets, setAssets] = useState<LandAsset[]>([]);
-  const [filteredAssets, setFilteredAssets] = useState<LandAsset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Search and Filter State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [assetTypeFilter, setAssetTypeFilter] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
 
   // Pagination State
   const [entriesPerPage, setEntriesPerPage] = useState(10);
@@ -33,7 +26,6 @@ const AssetRegistry = () => {
       const response = await getAssets();
       if (response && response.data) {
         setAssets(response.data);
-        setFilteredAssets(response.data);
       } else {
         throw new Error('Invalid response');
       }
@@ -48,38 +40,13 @@ const AssetRegistry = () => {
     fetchAssets();
   }, []);
 
-  useEffect(() => {
-    let result = assets;
-
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(a => 
-        a.asset_id.toLowerCase().includes(q) ||
-        (a.survey_no && a.survey_no.toLowerCase().includes(q)) ||
-        (a.owner_name && a.owner_name.toLowerCase().includes(q)) ||
-        (a.land_id && a.land_id.toLowerCase().includes(q))
-      );
-    }
-
-    if (assetTypeFilter) {
-      result = result.filter(a => a.asset_type?.toLowerCase() === assetTypeFilter.toLowerCase());
-    }
-
-    if (dateFilter) {
-      result = result.filter(a => new Date(a.created_at).toISOString().startsWith(dateFilter));
-    }
-
-    setFilteredAssets(result);
-    setCurrentPage(1); // Reset to first page on filter change
-  }, [searchQuery, assetTypeFilter, dateFilter, assets]);
-
   const handleExport = () => {
-    if (filteredAssets.length === 0) return;
+    if (assets.length === 0) return;
     
     const headers = ['Asset ID', 'Survey No.', 'Owner / Entity', 'Latitude', 'Longitude', 'Type', 'Area (Acres)', 'Registered Date'];
     const csvRows = [headers.join(',')];
 
-    for (const asset of filteredAssets) {
+    for (const asset of assets) {
       const row = [
         asset.asset_id,
         asset.survey_no || 'N/A',
@@ -105,17 +72,11 @@ const AssetRegistry = () => {
     document.body.removeChild(a);
   };
 
-  const handleResetFilters = () => {
-    setSearchQuery('');
-    setAssetTypeFilter('');
-    setDateFilter('');
-  };
-
   // Pagination logic
   const indexOfLastEntry = currentPage * entriesPerPage;
   const indexOfFirstEntry = indexOfLastEntry - entriesPerPage;
-  const currentEntries = filteredAssets.slice(indexOfFirstEntry, indexOfLastEntry);
-  const totalPages = Math.ceil(filteredAssets.length / entriesPerPage);
+  const currentEntries = assets.slice(indexOfFirstEntry, indexOfLastEntry);
+  const totalPages = Math.ceil(assets.length / entriesPerPage);
 
   const paginate = (pageNumber: number) => {
     if (pageNumber > 0 && pageNumber <= totalPages) {
@@ -123,7 +84,7 @@ const AssetRegistry = () => {
     }
   };
 
-  const totalAssets = filteredAssets.length;
+  const totalAssets = assets.length;
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
@@ -171,72 +132,6 @@ const AssetRegistry = () => {
 
       {/* 3. Main Data Section */}
       <section className="dashboard-widget" style={{ padding: 0, backgroundColor: 'transparent', border: 'none', boxShadow: 'none' }}>
-        
-        {/* Search & Filter section */}
-        <div className="search-filter-section">
-          <div className="search-filter-header">
-            <div className="search-filter-title">
-              <IconFilter width={20} height={20} /> Search & Filter Registry
-            </div>
-            <button className="btn-advanced-filters" onClick={() => setShowAdvanced(!showAdvanced)}>
-              Advanced Filters {showAdvanced ? <IconChevronUp width={16} height={16} /> : <IconChevronDown width={16} height={16} />}
-            </button>
-          </div>
-
-          <div className="search-filter-controls">
-            <div className="input-group" style={{ flex: 2 }}>
-              <label>Keyword Search</label>
-              <div className="input-with-icon">
-                <IconSearch width={16} height={16} />
-                <input 
-                  type="text" 
-                  placeholder="Asset ID, Survey No., Owner..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="input-group">
-              <label>Asset Type</label>
-              <select value={assetTypeFilter} onChange={(e) => setAssetTypeFilter(e.target.value)}>
-                <option value="">All Types</option>
-                <option value="agricultural">Agricultural</option>
-                <option value="residential">Residential</option>
-                <option value="commercial">Commercial</option>
-                <option value="industrial">Industrial</option>
-              </select>
-            </div>
-            <div className="input-group">
-              <label>Date Range (Start)</label>
-              <div className="input-with-icon">
-                <IconCalendar width={16} height={16} />
-                <input 
-                  type="date" 
-                  style={{ paddingLeft: '36px' }}
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                />
-              </div>
-            </div>
-            
-            <div className="filter-actions">
-              <button className="btn-secondary" onClick={handleResetFilters}>
-                <IconRotateCcw width={16} height={16} /> Reset
-              </button>
-            </div>
-          </div>
-
-          {showAdvanced && (
-            <div className="advanced-filters-area">
-              <div className="search-filter-controls">
-                <div className="input-group">
-                  <label>Area Range (Acres)</label>
-                  <select><option value="">Any Size</option></select>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* All Assets Toolbar */}
         <div className="assets-toolbar">
@@ -245,12 +140,12 @@ const AssetRegistry = () => {
             <h3>Official Assets</h3>
           </div>
           <div className="toolbar-right">
-            <span className="toolbar-count">Showing {currentEntries.length > 0 ? indexOfFirstEntry + 1 : 0}–{indexOfFirstEntry + currentEntries.length} of {filteredAssets.length} assets</span>
+            <span className="toolbar-count">Showing {currentEntries.length > 0 ? indexOfFirstEntry + 1 : 0}–{indexOfFirstEntry + currentEntries.length} of {assets.length} assets</span>
             <div className="toolbar-view-toggle">
               <span className="view-label">View:</span>
               <button className="btn-view active"><IconList width={16} height={16} /></button>
             </div>
-            <button className="btn-export" onClick={handleExport} disabled={filteredAssets.length === 0}>
+            <button className="btn-export" onClick={handleExport} disabled={assets.length === 0}>
               <IconDownload width={16} height={16} /> Export
             </button>
           </div>
@@ -312,7 +207,7 @@ const AssetRegistry = () => {
               </div>
             )}
 
-            {!isLoading && !error && filteredAssets.length === 0 && (
+            {!isLoading && !error && assets.length === 0 && (
               <div className="empty-state" style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
@@ -341,7 +236,7 @@ const AssetRegistry = () => {
         <div className="pagination-footer">
           <div className="pagination-left">
             <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-              Showing {currentEntries.length > 0 ? indexOfFirstEntry + 1 : 0}–{indexOfFirstEntry + currentEntries.length} of {filteredAssets.length} assets
+              Showing {currentEntries.length > 0 ? indexOfFirstEntry + 1 : 0}–{indexOfFirstEntry + currentEntries.length} of {assets.length} assets
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Show</span>

@@ -1,13 +1,15 @@
 import sys
 import os
+
+# Ensure we can import from src directory regardless of where the script is run from
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
+
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-# Ensure we can import from src directory
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
-from predict import DuplicateDetector
+from src.predict import DuplicateDetector
 
 app = FastAPI(
     title="PRJ-126 Duplicate Detection API",
