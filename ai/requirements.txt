@@ -6,3 +6,7 @@ joblib
 fastapi
 uvicorn
 pydantic
+pymupdf
+pytesseract
+Pillow
+python-multipart

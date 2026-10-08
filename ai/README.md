@@ -38,3 +38,11 @@ To regenerate the evaluation graphs in `models/graphs/` using the actual final m
 ```bash
 python src/generate_evaluation_graphs.py
 ```
+
+## OCR / Document Extraction
+This project includes a document text extraction capability (`POST /extract`).
+- **PyMuPDF (`pymupdf`)** is used for PDF handling (bypassing the need for Poppler).
+- **pytesseract** connects to the system Tesseract executable to OCR images.
+- Digital PDFs use embedded text extraction when possible.
+- Scanned PDFs/images use OCR.
+- **Tesseract must be installed separately on Windows** and must be available through the system `PATH`.
