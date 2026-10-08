@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import * as documentsService from './documents.service';
 import fs from 'fs';
 import path from 'path';
+import { analyzeDocumentConsistencyAndRecordEvent } from './document-ai.service';
+import { ApplicationStatus } from '@prisma/client';
 
 export const uploadDocumentController = async (
     req: Request,
@@ -145,6 +147,57 @@ export const deleteDocumentController = async (
             throw error;
         }
     } catch (error) {
+        next(error);
+    }
+};
+
+export const analyzeDocumentController = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const { documentId } = req.params;
+        const userId = (req as any).user?.user_id;
+
+        if (!userId) {
+            res.status(401).json({ status: 'error', message: 'Unauthorized' });
+            return;
+        }
+
+        const document = await documentsService.getDocumentById(documentId);
+        if (!document) {
+            res.status(404).json({ status: 'error', message: 'Document not found' });
+            return;
+        }
+
+        // Enforce ownership: only the applicant can trigger analysis for their own application
+        if (document.application.applicant_id !== userId) {
+            res.status(403).json({ status: 'error', message: 'Forbidden: You can only analyze documents belonging to your own application' });
+            return;
+        }
+
+        // Enforce status: only allowed during DRAFT or CORRECTION_REQUIRED
+        if (document.application.status !== ApplicationStatus.DRAFT && document.application.status !== ApplicationStatus.CORRECTION_REQUIRED) {
+            res.status(409).json({ status: 'error', message: `Analysis is not permitted when application is in ${document.application.status} state` });
+            return;
+        }
+
+        const result = await analyzeDocumentConsistencyAndRecordEvent(documentId, userId);
+        
+        res.status(200).json({ 
+            status: 'success', 
+            data: {
+                event_id: result.event_id,
+                cached: result.cached,
+                metadata: result.metadata
+            } 
+        });
+    } catch (error: any) {
+        if (error.message && (error.message.startsWith('AI /') || error.message.includes('unavailable'))) {
+            res.status(502).json({ status: 'error', message: error.message });
+            return;
+        }
         next(error);
     }
 };

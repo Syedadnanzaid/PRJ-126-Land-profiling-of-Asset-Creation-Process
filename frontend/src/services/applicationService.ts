@@ -27,6 +27,17 @@ export interface LandApplication {
   documents?: Document[];
   workflow?: WorkflowHistory[];
   duplicate_flags?: DuplicateFlag[];
+  events?: AssetEvent[];
+}
+
+export interface AssetEvent {
+  event_id: string;
+  application_id: string;
+  asset_id?: string | null;
+  event_type: string;
+  performed_by: string;
+  metadata?: any;
+  created_at: string;
 }
 
 export interface Document {
@@ -236,6 +247,12 @@ export async function downloadDocument(documentId: string): Promise<Blob> {
 export async function deleteDocument(documentId: string): Promise<{status: string, message: string} | null> {
   return apiRequest<{status: string, message: string}>(`/documents/${documentId}`, {
     method: 'DELETE',
+  });
+}
+
+export async function analyzeDocument(documentId: string): Promise<{status: string, data: {event_id: string, cached: boolean, metadata: any}} | null> {
+  return apiRequest<{status: string, data: {event_id: string, cached: boolean, metadata: any}}>(`/documents/${documentId}/analyze`, {
+    method: 'POST',
   });
 }
 

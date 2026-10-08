@@ -105,5 +105,31 @@ class TestDocumentConsistency(unittest.TestCase):
         res = self.engine.compare_owner_name("Sarah", long_str)
         self.assertEqual(res["result"], "NOT_FOUND")
 
+    def test_extract_survey_no_with_spaces(self):
+        # Specifically test the exact extraction behavior requested
+        # "Survey Number: SUR 987" -> extracted survey number contains "SUR 987"
+        text1 = "Survey Number: SUR 987"
+        self.assertEqual(self.engine.extract_survey_no(text1), "SUR 987")
+        
+        # "Survey No.: SUR-987"
+        text2 = "Survey No.: SUR-987"
+        self.assertEqual(self.engine.extract_survey_no(text2), "SUR-987")
+        
+        # "Survey No: sur987"
+        text3 = "Survey No: sur987"
+        self.assertEqual(self.engine.extract_survey_no(text3), "sur987")
+        
+        # "Sy No: SY 987"
+        text4 = "Sy No: SY 987"
+        self.assertEqual(self.engine.extract_survey_no(text4), "SY 987")
+        
+        # Edge case: next line has another field
+        text5 = "Survey Number: 987\nOwner Name: Ruposh"
+        self.assertEqual(self.engine.extract_survey_no(text5), "987")
+        
+        # Edge case: space separated digits only or short word
+        text6 = "Sur No: 123 A"
+        self.assertEqual(self.engine.extract_survey_no(text6), "123 A")
+
 if __name__ == '__main__':
     unittest.main()

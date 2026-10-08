@@ -15,7 +15,7 @@ class DocumentConsistencyEngine:
     def extract_survey_no(text: str) -> Optional[str]:
         # Support Survey No, Survey Number, Sur. No, Sy No, etc.
         # Capture following alphanumeric string, tolerating hyphens.
-        match = re.search(r"(?i)(?:survey|sur|sy)[\s\-\.]*n[ou][A-Za-z]*[\s\-\.:#]*([A-Za-z0-9\-]+)", text)
+        match = re.search(r"(?i)(?:survey|sur|sy)[\s\-\.]*n[ou][A-Za-z]*[\s\-\.:#]*([A-Za-z0-9\-]+(?:[ \t]+(?:[0-9]+[A-Za-z]*|[A-Za-z]{1,2})\b)?)", text)
         if match:
             return match.group(1).strip()
         return None

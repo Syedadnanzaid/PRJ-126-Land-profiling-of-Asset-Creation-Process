@@ -53,6 +53,12 @@ documentRoutes.delete(
     documentsController.deleteDocumentController
 );
 
+documentRoutes.post(
+    '/:documentId/analyze',
+    authorize(Role.APPLICANT),
+    documentsController.analyzeDocumentController
+);
+
 const applicationDocumentRoutes = Router({ mergeParams: true });
 applicationDocumentRoutes.use(authenticate);
 

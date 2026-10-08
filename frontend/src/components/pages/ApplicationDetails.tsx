@@ -5,9 +5,9 @@ import {
   requestCorrection, resubmitApplication, completeVerification, 
   requestApproval, approveApplication, rejectApplication,
   getApplicationDocuments, uploadApplicationDocument, deleteDocument,
-  downloadDocument
+  downloadDocument, analyzeDocument
 } from '../../services/applicationService';
-import type { LandApplication, Document } from '../../services/applicationService';
+import type { LandApplication, Document, AssetEvent } from '../../services/applicationService';
 import { getCurrentUser } from '../../services/authService';
 import type { User } from '../../services/authService';
 import { 
@@ -35,6 +35,7 @@ const ApplicationDetails = () => {
   const [showRemarksModal, setShowRemarksModal] = useState<boolean>(false);
   const [remarksText, setRemarksText] = useState<string>('');
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [analyzingDocs, setAnalyzingDocs] = useState<Record<string, boolean>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -104,6 +105,21 @@ const ApplicationDetails = () => {
       setTimeout(() => setActionMessage(null), 3000);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleAnalyzeDocument = async (documentId: string) => {
+    setAnalyzingDocs(prev => ({ ...prev, [documentId]: true }));
+    setActionMessage(null);
+    try {
+      await analyzeDocument(documentId);
+      setActionMessage({ type: 'success', text: 'AI analysis completed successfully.' });
+      await refreshApplication();
+    } catch (err: any) {
+      setActionMessage({ type: 'error', text: err.message || 'Failed to analyze document.' });
+    } finally {
+      setAnalyzingDocs(prev => ({ ...prev, [documentId]: false }));
+      setTimeout(() => setActionMessage(null), 3000);
     }
   };
 
@@ -602,22 +618,91 @@ const ApplicationDetails = () => {
           <div className="ad-card-body">
             {documents && documents.length > 0 ? (
               <div className="ad-document-list">
-                {documents.map((doc, index) => (
-                  <div key={doc.document_id || index} className="ad-document-item">
-                    <IconFile width={20} height={20} color="#64748B" />
-                    <div className="doc-info">
-                      <span className="doc-name">{doc.file_name}</span>
-                      <span className="doc-meta">{doc.document_type} • {new Date(doc.uploaded_at).toLocaleDateString()}</span>
+                {documents.map((doc, index) => {
+                  const aiEvent = application.events?.find(e => e.event_type === 'AI_DOCUMENT_ANALYZED' && e.metadata?.document_id === doc.document_id);
+                  
+                  return (
+                  <div key={doc.document_id || index} style={{ marginBottom: '16px' }}>
+                    <div className="ad-document-item">
+                      <IconFile width={20} height={20} color="#64748B" />
+                      <div className="doc-info">
+                        <span className="doc-name">{doc.file_name}</span>
+                        <span className="doc-meta">{doc.document_type} • {new Date(doc.uploaded_at).toLocaleDateString()}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        {currentUser?.role === 'APPLICANT' && ['DRAFT', 'CORRECTION_REQUIRED'].includes(application.status) && (
+                          <button 
+                            className="ad-btn-secondary" 
+                            style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                            onClick={() => handleAnalyzeDocument(doc.document_id)}
+                            disabled={actionLoading || analyzingDocs[doc.document_id]}
+                          >
+                            {analyzingDocs[doc.document_id] ? 'Analyzing...' : 'Analyze with AI'}
+                          </button>
+                        )}
+                        <button className="ad-btn-icon" onClick={() => handleDocumentAction(doc, 'view')} title="View" disabled={actionLoading}><span style={{fontSize: '12px', fontWeight: 'bold'}}>VIEW</span></button>
+                        <button className="ad-btn-icon" onClick={() => handleDocumentAction(doc, 'download')} title="Download" disabled={actionLoading}><IconDownload width={16} height={16} /></button>
+                        {currentUser?.role === 'APPLICANT' && ['DRAFT', 'CORRECTION_REQUIRED'].includes(application.status) && (
+                          <button className="ad-btn-icon" onClick={() => handleDeleteDocument(doc.document_id)} style={{ color: '#EF4444' }} title="Delete" disabled={actionLoading}><IconXCircle width={16} height={16} /></button>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="ad-btn-icon" onClick={() => handleDocumentAction(doc, 'view')} title="View" disabled={actionLoading}><span style={{fontSize: '12px', fontWeight: 'bold'}}>VIEW</span></button>
-                      <button className="ad-btn-icon" onClick={() => handleDocumentAction(doc, 'download')} title="Download" disabled={actionLoading}><IconDownload width={16} height={16} /></button>
-                      {currentUser?.role === 'APPLICANT' && ['DRAFT', 'CORRECTION_REQUIRED'].includes(application.status) && (
-                        <button className="ad-btn-icon" onClick={() => handleDeleteDocument(doc.document_id)} style={{ color: '#EF4444' }} title="Delete" disabled={actionLoading}><IconXCircle width={16} height={16} /></button>
-                      )}
-                    </div>
+                    
+                    {aiEvent && aiEvent.metadata && (
+                      <div style={{ marginTop: '8px', padding: '12px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                          <h4 style={{ margin: 0, fontSize: '0.875rem', color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <IconLayers width={16} height={16} /> 
+                            AI Decision Support Evidence
+                          </h4>
+                          <span style={{ 
+                            fontSize: '0.75rem', 
+                            padding: '2px 8px', 
+                            borderRadius: '12px', 
+                            fontWeight: 'bold',
+                            backgroundColor: aiEvent.metadata.overall_consistency === 'MATCH' ? '#DCFCE7' : aiEvent.metadata.overall_consistency === 'WARNING' ? '#FEF3C7' : '#FEE2E2',
+                            color: aiEvent.metadata.overall_consistency === 'MATCH' ? '#166534' : aiEvent.metadata.overall_consistency === 'WARNING' ? '#92400E' : '#991B1B'
+                          }}>
+                            {aiEvent.metadata.overall_consistency}
+                          </span>
+                        </div>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', marginBottom: '12px' }}>
+                          {Object.entries(aiEvent.metadata.fields || {}).map(([fieldKey, fieldData]: [string, any]) => (
+                            <div key={fieldKey} style={{ fontSize: '0.8125rem', padding: '8px', backgroundColor: '#FFFFFF', border: '1px solid #F1F5F9', borderRadius: '4px' }}>
+                              <div style={{ color: '#64748B', marginBottom: '4px', textTransform: 'capitalize' }}>{fieldKey.replace('_', ' ')}</div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontWeight: '500', color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={fieldData.document_value || 'Not found'}>
+                                  {fieldData.document_value || 'Not found'}
+                                </span>
+                                <span style={{ 
+                                  fontSize: '0.7rem', 
+                                  padding: '2px 4px', 
+                                  borderRadius: '4px',
+                                  backgroundColor: fieldData.result === 'MATCH' ? '#DCFCE7' : fieldData.result === 'WARNING_SIMILAR' ? '#FEF3C7' : '#FEE2E2',
+                                  color: fieldData.result === 'MATCH' ? '#166534' : fieldData.result === 'WARNING_SIMILAR' ? '#92400E' : '#991B1B'
+                                }}>
+                                  {fieldData.result}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#64748B' }}>
+                          <div>
+                            <span>Method: {aiEvent.metadata.extraction_method}</span>
+                            <span style={{ margin: '0 8px' }}>|</span>
+                            <span>Pages: {aiEvent.metadata.page_count}</span>
+                            <span style={{ margin: '0 8px' }}>|</span>
+                            <span>Analyzed: {new Date(aiEvent.created_at).toLocaleString()}</span>
+                          </div>
+                          <div style={{ fontStyle: 'italic' }}>Does not replace official verification.</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ))}
+                )})}
               </div>
             ) : (
               <div className="ad-empty-state">
