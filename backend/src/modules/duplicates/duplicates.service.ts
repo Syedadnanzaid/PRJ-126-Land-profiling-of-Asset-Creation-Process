@@ -175,4 +175,133 @@ export const reviewDuplicateFlag = async (
     });
 
     return updatedFlag;
+};
+
+export const runAutomaticDuplicateScan = async (
+    applicationId: string,
+    performedBy: string
+) => {
+    const application = await prisma.landApplication.findUnique({
+        where: { application_id: applicationId }
+    });
+
+    if (!application) return;
+
+    const officialAssets = await prisma.landAsset.findMany();
+
+    for (const asset of officialAssets) {
+        try {
+            const aiPayload = {
+                asset_a: {
+                    land_id: null,
+                    survey_no: application.survey_no,
+                    owner_name: application.owner_name,
+                    area: application.area,
+                    latitude: application.latitude,
+                    longitude: application.longitude,
+                    asset_type: application.asset_type,
+                    description: application.description
+                },
+                asset_b: {
+                    land_id: asset.land_id,
+                    survey_no: asset.survey_no,
+                    owner_name: asset.owner_name,
+                    area: asset.area,
+                    latitude: asset.latitude,
+                    longitude: asset.longitude,
+                    asset_type: asset.asset_type,
+                    description: asset.description
+                }
+            };
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+            let response;
+            try {
+                response = await fetch(`${AI_API_URL}/predict`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(aiPayload),
+                    signal: controller.signal
+                });
+            } finally {
+                clearTimeout(timeoutId);
+            }
+
+            if (!response.ok) {
+                console.error(`[AI] Service returned HTTP ${response.status} for asset ${asset.asset_id}`);
+                continue;
+            }
+
+            const aiResult = (await response.json()) as AIResponse;
+
+            if (typeof aiResult.duplicate_probability !== 'number' || 
+                !isFinite(aiResult.duplicate_probability) || 
+                aiResult.duplicate_probability < 0 || 
+                aiResult.duplicate_probability > 1) {
+                console.error(`[AI] Invalid duplicate_probability from AI for asset ${asset.asset_id}`);
+                continue;
+            }
+
+            if (!aiResult.features || typeof aiResult.features.survey_similarity !== 'number') {
+                console.error(`[AI] Invalid features from AI for asset ${asset.asset_id}`);
+                continue;
+            }
+
+            if (aiResult.is_duplicate === true) {
+                const existingFlag = await prisma.duplicateFlag.findFirst({
+                    where: {
+                        application_id: applicationId,
+                        matched_asset_id: asset.asset_id
+                    }
+                });
+
+                if (existingFlag) {
+                    continue;
+                }
+
+                await prisma.$transaction(async (tx) => {
+                    await tx.duplicateFlag.create({
+                        data: {
+                            application_id: applicationId,
+                            matched_asset_id: asset.asset_id,
+                            similarity_score: aiResult.duplicate_probability,
+                            survey_similarity: aiResult.features.survey_similarity,
+                            owner_similarity: aiResult.features.owner_similarity,
+                            area_similarity: aiResult.features.area_similarity,
+                            location_similarity: aiResult.features.location_similarity,
+                            reason: aiResult.reason,
+                            review_status: ReviewStatus.PENDING,
+                            reviewed_by: null,
+                            reviewed_at: null,
+                            remarks: null
+                        }
+                    });
+
+                    await tx.assetEvent.create({
+                        data: {
+                            event_type: EventType.AI_DUPLICATE_CHECKED,
+                            application_id: applicationId,
+                            asset_id: null,
+                            performed_by: performedBy,
+                            metadata: {
+                                matched_asset_id: asset.asset_id,
+                                duplicate_probability: aiResult.duplicate_probability,
+                                is_duplicate: true,
+                                features: {
+                                    survey_similarity: aiResult.features.survey_similarity,
+                                    owner_similarity: aiResult.features.owner_similarity,
+                                    area_similarity: aiResult.features.area_similarity,
+                                    location_similarity: aiResult.features.location_similarity
+                                },
+                                reason: aiResult.reason
+                            }
+                        }
+                    });
+                });
+            }
+        } catch (error) {
+            console.error(`[AI] Prediction failed for candidate ${asset.asset_id}:`, error);
+        }
+    }
 };

@@ -1,4 +1,5 @@
 import { PrismaClient, ApplicationStatus, EventType } from '@prisma/client';
+import { runAutomaticDuplicateScan } from '../duplicates/duplicates.service';
 
 const prisma = new PrismaClient();
 
@@ -10,7 +11,7 @@ export const processTransition = async (
   eventType: EventType,
   remarks?: string
 ) => {
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const application = await tx.landApplication.findUnique({
       where: { application_id: applicationId }
     });
@@ -57,6 +58,15 @@ export const processTransition = async (
 
     return { application: updatedApplication, history };
   });
+
+  // After successful transaction, trigger AI scan asynchronously if DRAFT -> SUBMITTED
+  if (expectedStatus === ApplicationStatus.DRAFT && newStatus === ApplicationStatus.SUBMITTED) {
+    void runAutomaticDuplicateScan(applicationId, userId).catch(error => {
+      console.error(`[AI] Automatic duplicate scan failed for application ${applicationId}:`, error);
+    });
+  }
+
+  return result;
 };
 
 export const processFinalApproval = async (

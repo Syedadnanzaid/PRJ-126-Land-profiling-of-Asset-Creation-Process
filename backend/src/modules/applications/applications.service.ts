@@ -146,7 +146,8 @@ export const getApplicationById = async (applicationId: string) => {
             select: { name: true, role: true }
           }
         }
-      }
+      },
+      duplicate_flags: true
     }
   });
 };
